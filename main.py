@@ -18,6 +18,8 @@ import random
 import torchvision.transforms as T
 from PIL import Image
 import wandb
+from huggingface_hub import hf_hub_download
+import json
 
 DISCRETE_SCALE="discrete"
 CONTINUOUS_SCALE="continuous"
@@ -26,6 +28,7 @@ UNET="unet"
 LORA="lora"
 CONTROLNET="control"
 IPADAPTER="adapter"
+BASE_REPO="SimianLuo/LCM_Dreamshaper_v7"
 
 def inference(unet:UNet2DConditionModel,
               text_encoder:CLIPTextModel,
@@ -41,7 +44,7 @@ def inference(unet:UNet2DConditionModel,
               bsz:int,
               dims:list,
               mask:torch.Tensor=None,
-              src_image:Image.Image=None #for super resolution
+              src_image:torch.Tensor=None #for super resolution
               ):
     if args.text_conditional:
         if type(captions)==str:
@@ -56,7 +59,7 @@ def inference(unet:UNet2DConditionModel,
         
     latents=None
     if src_image:
-        latents=vae.encode(image_processor.preprocess(src_image).to(device)).latent_dist.sample()*vae.config.scaling_factor
+        latents=vae.encode(src_image.to(device)).latent_dist.sample()*vae.config.scaling_factor
         if mask:
             latents=mask*latents
     
@@ -105,12 +108,15 @@ def inference(unet:UNet2DConditionModel,
 
 def main(args):
     api,accelerator,device=repo_api_init(args)
-    pipe=DiffusionPipeline.from_pretrained("Lykon/dreamshaper-8")
+    if args.cpu:
+        device=torch.device("cpu")
+    print("device ",device)
+    pipe=DiffusionPipeline.from_pretrained(BASE_REPO)
     vae=pipe.vae.to(device)
     text_encoder=pipe.text_encoder.to(device)
     scheduler=DDIMScheduler()
     tokenizer = CLIPTokenizer.from_pretrained(
-        "Lykon/dreamshaper-8", subfolder="tokenizer"
+        BASE_REPO, subfolder="tokenizer"
     )
     
     image_processor=VaeImageProcessor()
@@ -125,7 +131,10 @@ def main(args):
     
     
     if args.method==UNET:
-        unet=UNet2DConditionModel().to(device)
+        config_path=hf_hub_download(BASE_REPO,"config.json",subfolder="unet")
+        
+        #unet=UNet2DConditionModel.from_config(json.load(open(config_path,"r"))).to(device)
+        unet=pipe.unet
         params=[p for p in unet.parameters()]
         
         optimizer=torch.optim.AdamW(params,args.lr)
@@ -133,8 +142,8 @@ def main(args):
         "pytorch_weights.safetensors":unet
         }
 
-        optimizer,train_loader,test_loader,val_loader,vae,unet,text_encoder=accelerator.prepare(
-            optimizer,train_loader,test_loader,val_loader,vae,unet,text_encoder)
+        '''optimizer,train_loader,test_loader,val_loader,vae,unet,text_encoder=accelerator.prepare(
+            optimizer,train_loader,test_loader,val_loader,vae,unet,text_encoder)'''
     
     save_subdir=os.path.join("scale",args.repo_id)
     save,load=save_and_load_functions(model_dict,save_subdir,api,args.repo_id)
@@ -160,7 +169,7 @@ def main(args):
         
     dims=dims[::-1]
     
-    mask_outpaint=Image.open(os.path.join("data","datasets","gt_keep_masks","ex64")).convert("L")
+    mask_outpaint=Image.open(os.path.join("data","datasets","gt_keep_masks","ex64","000000.png")).convert("L")
     mask_outpaint_pt=T.ToTensor()(mask_outpaint.resize((args.dim//8,args.dim//8)))
     
     mask_inpaint_pt=(1.-mask_outpaint_pt)
@@ -168,20 +177,26 @@ def main(args):
     @optimization_loop(accelerator,train_loader,args.epochs,args.val_interval,args.limit,val_loader,
                        test_loader,save,start_epoch)
     def batch_function(batch,training,misc_dict):
-        images=batch["images"]
-        captions=batch["captions"]
+        images=batch["image"]
+        captions=batch["caption"]
         
         bsz=len(images)
+        
+        if misc_dict["epochs"]==start_epoch and misc_dict["b"]==0:
+            print("imgease size ",images.size())
         if misc_dict["mode"] in ["train","val"]:
-            output_latents=vae.encode(image_processor.preprocess(images).to(device)).latent_dist.sample()
+            output_latents=vae.encode(images.to(device)).latent_dist.sample()
             output_latents*=vae.config.scaling_factor
             if args.text_conditional:
                 token_ids= tokenizer(
                     captions, max_length=tokenizer.model_max_length, padding="max_length", truncation=True, return_tensors="pt"
                 ).input_ids
-                encoder_hidden_states=text_encoder(token_ids, return_dict=False)[0]
             else:
-                encoder_hidden_states=None
+                token_ids= tokenizer(
+                    [" "]*bsz, max_length=tokenizer.model_max_length, padding="max_length", truncation=True, return_tensors="pt"
+                ).input_ids
+            encoder_hidden_states=text_encoder(token_ids, return_dict=False)[0]
+
             
             if args.timesteps==CONTINUOUS_NOISE:
                 noise=torch.randn_like(output_latents)
@@ -191,15 +206,18 @@ def main(args):
             else:
                 if args.timesteps==CONTINUOUS_SCALE:
                     scales=[int((args.dim)*random.random()) for r in range(bsz)]
-                    scaled_images=[img.resize((args.dim-r,args.dim-r)).resize((args.dim,args.dim)) for r,img in zip(scales,images)]
+                    #scaled_images=[img.resize((args.dim-r,args.dim-r)).resize((args.dim,args.dim)) for r,img in zip(scales,images)]
+                    scaled_images=[T.Resize(args.dim)(T.Resize(args.dim-r)(img)) for r,img in zip(scales,images) ]
                     timesteps=torch.tensor([int(scheduler.config.num_train_timesteps*s/(args.dim-1)) for s in scales]).long()
                     
                 if args.timesteps==DISCRETE_SCALE:
-                    scales=random.choices(len(dims),k=bsz)
-                    scaled_images=[img.resize((dims[j],dims[j])).resize((args.dim,args.dim)) for j,img in zip(scales,images)]
+                    scales=random.choices([j for j in range(len(dims))],k=bsz)
+                    #scaled_images=[img.resize((dims[j],dims[j])).resize((args.dim,args.dim)) for j,img in zip(scales,images)]
+                    scaled_images=[T.Resize(args.dim)(T.Resize(dims[j])(img)) for j,img in zip(scales,images) ]
                     timesteps=torch.tensor([int(scheduler.config.num_train_timesteps*s/(len(dims))) for s in scales]).long()
                 
-                input_latents=vae.encode(image_processor.preprocess(scaled_images)).latent_dist.sample()
+                input_latents=vae.encode(torch.stack(scaled_images)).latent_dist.sample()
+                print(input_latents.size())
                 
             if training:
                 with accelerator.accumulate(params):
@@ -237,6 +255,8 @@ def main(args):
                 accelerator.log({
                     f"{misc_dict['mode']}_{k+count}":wandb.Image(concat_images_horizontally([inp,outp,super,real]))
                 })
+                
+    batch_function()
 
 if __name__=='__main__':
     print_details()
@@ -248,6 +268,7 @@ if __name__=='__main__':
     parser.add_argument("--min_dim",type=int,default=1)
     parser.add_argument("--text_conditional",action="store_true")
     parser.add_argument("--num_inference_steps",type=int,default=20)
+    parser.add_argument("--cpu",action="store_true")
     args=parse_args(parser)
     print(args)
     main(args)

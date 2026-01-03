@@ -12,3 +12,4 @@ gdown
 torchvision
 wandb
 peft
+torchmetrics

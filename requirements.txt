@@ -1,0 +1,13 @@
+diffusers
+datasets
+huggingface_hub
+pillow
+opencv-python
+numpy
+torch
+accelerate
+trl
+transformers
+gdown
+torchvision
+wandb

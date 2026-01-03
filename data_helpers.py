@@ -28,6 +28,7 @@ class AFHQDataset(Dataset):
                 self.mask_list.append(os.path.join(subdir,file))
                 '''if subdir not in ["thick","thin"]: #so i guess all the other ones should just be their own thing???
                     break'''
+        self.cat_set=set(self.cat_list)
                 
         
         

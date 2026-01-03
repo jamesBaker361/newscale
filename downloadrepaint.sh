@@ -12,8 +12,8 @@ cd data/pretrained
 )
 
 # data
-(
-gdown https://drive.google.com/uc?id=1Q_dxuyI41AAmSv9ti3780BwaJQqwvwMv
+eval "$(conda shell.bash hook)"
+conda activate p13
+python -c "import gdown;import os;gdown.download('https://drive.google.com/uc?id=1Q_dxuyI41AAmSv9ti3780BwaJQqwvwMv')"
 unzip data.zip
 rm data.zip
-)

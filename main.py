@@ -270,8 +270,8 @@ def main(args):
         "incept":0
     }
     
-    ssim_metric=StructuralSimilarityIndexMeasure(data_range=[-1.0,1.0])
-    psnr_metric=PeakSignalNoiseRatio(data_range=[-1.0,1.0])
+    ssim_metric=StructuralSimilarityIndexMeasure(data_range=(-1.0,1.0))
+    psnr_metric=PeakSignalNoiseRatio(data_range=(-1.0,1.0))
     lpips_metric=LearnedPerceptualImagePatchSimilarity(net_type='squeeze')
     fid_metric=FrechetInceptionDistance(feature=64,normalize=False) #expects images in [0,255]
     inception_metric=InceptionScore(normalize=False) #expects images in [0,255]

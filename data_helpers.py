@@ -22,7 +22,7 @@ class MaskDataset(Dataset):
 
 
 class MiniImageNet(MaskDataset):
-    def __init__(self,split:str="train",dim:int=256):
+    def __init__(self,split:str="train",dim:int=256,limit_per_class:int=-1):
         super().__init__()
         self.dim=dim
         data=load_dataset("timm/mini-imagenet",split=split)
@@ -35,9 +35,16 @@ class MiniImageNet(MaskDataset):
         class_mapping={}
         for key,pair in class_index.items():
             class_mapping[key]=pair[1]
+        label_count={}
         for row in data:
-            self.img_list.append(row["image"])
-            self.cat_list.append(class_mapping[str(row["label"])])
+            label=class_mapping[str(row["label"])]
+            if label not in label_count:
+                label_count[label]=0
+            if label_count!=limit_per_class:
+                self.img_list.append(row["image"])
+                
+                self.cat_list.append(class_mapping[str(row["label"])])
+                label_count[label]+=1
             
         
             

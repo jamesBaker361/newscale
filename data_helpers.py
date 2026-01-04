@@ -132,9 +132,3 @@ class AFHQDataset(MaskDataset):
             "mask":self.get_mask(),
             #"mask_out":Image.open(self.mask_list[random.randint(0,len(self.mask_list-1))]).convert("L").resize((self.dim,self.dim))
         }
-        
-data=SUNDataset("test")
-for batch in data:
-    break
-
-print(batch)

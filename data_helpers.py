@@ -12,12 +12,25 @@ import json
 class MaskDataset(Dataset):
     def __init__(self):
         super().__init__()
+        self.img_list=[]
+        self.cat_list=[]
         self.mask_list=[]
+        self.image_processor=VaeImageProcessor()
         mask_dir=os.path.join("data","datasets","gt_keep_masks")
         for sub in ["thick","thin"]: #:
             subdir=os.path.join(mask_dir,sub)
             for file in   os.listdir(subdir):
                 self.mask_list.append(os.path.join(subdir,file))
+                
+    def __len__(self):
+        return len(self.img_list)
+    
+    def get_mask(self):
+        mask=  Image.open(self.mask_list[random.randint(0,len(self.mask_list)-1)]).convert("L").resize((self.dim,self.dim))
+        mask=self.image_processor.pil_to_numpy(mask)
+        mask=self.image_processor.numpy_to_pt(mask)
+        return mask #we DONT want to normalize so we do this
+        
 
 
 
@@ -27,41 +40,69 @@ class MiniImageNet(MaskDataset):
         self.dim=dim
         data=load_dataset("timm/mini-imagenet",split=split)
         data=data.cast_column("image",datasets.Image())
-        self.image_processor=VaeImageProcessor()
-        self.img_list=[]
-        self.cat_list=[]
+        
+
         class_index_path="imagenet_class_index.json"
         class_index=json.load(open(class_index_path,"r"))
         class_mapping={}
         for key,pair in class_index.items():
             class_mapping[key]=pair[1]
-        label_count={}
+        self.label_count={}
         for row in data:
             label=class_mapping[str(row["label"])]
-            if label not in label_count:
-                label_count[label]=0
-            if label_count!=limit_per_class:
+            if label not in self.label_count:
+                self.label_count[label]=0
+            if self.label_count!=limit_per_class:
                 self.img_list.append(row["image"])
                 
                 self.cat_list.append(class_mapping[str(row["label"])])
-                label_count[label]+=1
+                self.label_count[label]+=1
             
         
             
         self.cat_set=set(self.cat_list)
-            
-    def __len__(self):
-        return len(self.img_list)
+
     
     def __getitem__(self, index):
         return {
             "image":self.image_processor.preprocess([self.img_list[index].resize((self.dim,self.dim))])[0],
             "caption":self.cat_list[index],
-            "mask":self.image_processor.preprocess([Image.open(self.mask_list[random.randint(0,len(self.mask_list)-1)]).convert("L").resize((self.dim,self.dim))])[0],
+            "mask":self.get_mask(),
             #"mask_out":Image.open(self.mask_list[random.randint(0,len(self.mask_list-1))]).convert("L").resize((self.dim,self.dim))
         }
         
         
+class SUNDataset(MaskDataset):
+    def __init__(self,split:str="train",dim:int=256,limit_per_class:int=150):
+        super().__init__()
+        self.dim=dim
+        data = load_dataset('tanganke/sun397',split=split)
+        data=data.cast_column("image",datasets.Image())
+        class_index_path="sun397_class_index.json"
+        class_mapping=json.load(open(class_index_path,"r"))
+        self.label_count={}
+        for row in data:
+            label=class_mapping[str(row["label"])]
+            if label not in self.label_count:
+                self.label_count[label]=0
+            if self.label_count!=limit_per_class:
+                self.img_list.append(row["image"])
+                
+                self.cat_list.append(class_mapping[str(row["label"])])
+                self.label_count[label]+=1
+            
+        
+        
+        self.cat_set=set(self.cat_list)
+        
+        
+    def __getitem__(self, index):
+        return {
+            "image":self.image_processor.preprocess([self.img_list[index].resize((self.dim,self.dim))])[0],
+            "caption":self.cat_list[index],
+            "mask":self.get_mask(),
+            #"mask_out":Image.open(self.mask_list[random.randint(0,len(self.mask_list-1))]).convert("L").resize((self.dim,self.dim))
+        }
         
 
 class AFHQDataset(MaskDataset):
@@ -71,9 +112,7 @@ class AFHQDataset(MaskDataset):
         self.dim=dim
         self.split=split
         self.categories=categories
-        self.img_list=[]
-        self.cat_list=[]
-        self.image_processor=VaeImageProcessor()
+        
         for cat in categories:
             dir_path=os.path.join("data","afhq",split,cat)
             for file in os.listdir(dir_path):
@@ -84,23 +123,18 @@ class AFHQDataset(MaskDataset):
         self.cat_set=set(self.cat_list)
                 
         
-        
-        
-    def __len__(self):
-        return len(self.img_list)
+
     
     def __getitem__(self, index):
         return {
             "image":self.image_processor.preprocess([Image.open(self.img_list[index]).resize((self.dim,self.dim))])[0],
             "caption":self.cat_list[index],
-            "mask":self.image_processor.preprocess([Image.open(self.mask_list[random.randint(0,len(self.mask_list)-1)]).convert("L").resize((self.dim,self.dim))])[0],
+            "mask":self.get_mask(),
             #"mask_out":Image.open(self.mask_list[random.randint(0,len(self.mask_list-1))]).convert("L").resize((self.dim,self.dim))
         }
         
-if __name__=='__main__':
-    data=MiniImageNet()
-    for batch in data:
-        break
-    
-    for key in batch:
-        print(key, batch[key])
+data=SUNDataset("test")
+for batch in data:
+    break
+
+print(batch)

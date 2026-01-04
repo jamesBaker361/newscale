@@ -62,12 +62,13 @@ def inference(unet:UNet2DConditionModel,
         if type(captions)==str:
             captions=[captions]*bsz
             #bsz=1
-        token_ids= tokenizer(
-                    captions, max_length=tokenizer.model_max_length, padding="max_length", truncation=True, return_tensors="pt"
-                ).input_ids
-        encoder_hidden_states=text_encoder(token_ids, return_dict=False)[0]
     else:
-        encoder_hidden_states=None
+        captions=[" "]*bsz
+    token_ids= tokenizer(
+                captions, max_length=tokenizer.model_max_length, padding="max_length", truncation=True, return_tensors="pt"
+            ).input_ids
+    encoder_hidden_states=text_encoder(token_ids, return_dict=False)[0]
+
         
     latents=None
     if src_image:

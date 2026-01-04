@@ -31,6 +31,7 @@ from torchmetrics.image.fid import FrechetInceptionDistance
 from datasets import Dataset
 from torchmetrics.image.inception import InceptionScore
 import numpy as np
+from tqdm.auto import tqdm
 
 DISCRETE_SCALE="discrete"
 CONTINUOUS_SCALE="continuous"
@@ -94,21 +95,24 @@ def inference(unet:UNet2DConditionModel,
         if args.timesteps==DISCRETE_SCALE:
             timesteps=[torch.tensor(t).long() for t in dims]
             
-    for i,t in enumerate(timesteps):
-        # expand the latents if we are doing classifier free guidance
-        #latent_model_input = torch.cat([latents] * 2) if self.do_classifier_free_guidance else latents
-        #latent_model_input = scheduler.scale_model_input(latents, t)
-        
-        noise_pred = unet(
-                latents,
-                t,
-            encoder_hidden_states=encoder_hidden_states,
-            return_dict=False,
-        )[0]
-        
-        # compute the previous noisy sample x_t -> x_t-1
-        latents = scheduler.step(noise_pred, t, latents, return_dict=False)[0]
+    with tqdm(total=num_inference_steps) as progress_bar:
+        for i,t in enumerate(timesteps):
+            # expand the latents if we are doing classifier free guidance
+            #latent_model_input = torch.cat([latents] * 2) if self.do_classifier_free_guidance else latents
+            #latent_model_input = scheduler.scale_model_input(latents, t)
             
+            noise_pred = unet(
+                    latents,
+                    t,
+                encoder_hidden_states=encoder_hidden_states,
+                return_dict=False,
+            )[0]
+            
+            # compute the previous noisy sample x_t -> x_t-1
+            
+            latents = scheduler.step(noise_pred, t, latents, return_dict=False)[0]
+            
+        progress_bar.update()
     image = vae.decode(latents / vae.config.scaling_factor, return_dict=False, )[0]
     image = image_processor.postprocess(image,output_type=output_type)
     return image

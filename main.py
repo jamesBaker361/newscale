@@ -128,6 +128,7 @@ def main(args):
     vae=pipe.vae.to(device)
     text_encoder=pipe.text_encoder.to(device)
     scheduler=DDIMScheduler()
+    scheduler.set_timesteps(args.num_inference_steps)
     tokenizer = CLIPTokenizer.from_pretrained(
         BASE_REPO, subfolder="tokenizer"
     )

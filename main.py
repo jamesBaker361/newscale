@@ -415,7 +415,7 @@ def main(args):
         real_images=torch.cat([batch["image"] for batch in test_loader ])
         gen_images=[]
         while k<args.n_test:
-            captions=random.sample(test_dataset.cat_set,args.batch_size)
+            captions=random.sample([cap for cap in test_dataset.cat_set],args.batch_size)
             images=inference(unet,text_encoder,tokenizer,vae,
                              image_processor,scheduler,args.num_inference_steps,args,
                              captions,device,args.batch_size,dims,"pt",None,None

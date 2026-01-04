@@ -112,7 +112,7 @@ def inference(unet:UNet2DConditionModel,
             
             latents = scheduler.step(noise_pred, t, latents, return_dict=False)[0]
             
-        progress_bar.update()
+            progress_bar.update()
     image = vae.decode(latents / vae.config.scaling_factor, return_dict=False, )[0]
     image = image_processor.postprocess(image,output_type=output_type)
     return image

@@ -41,6 +41,9 @@ LORA="lora"
 CONTROLNET="control"
 IPADAPTER="adapter"
 BASE_REPO="SimianLuo/LCM_Dreamshaper_v7"
+VELOCITY="v_prediction"
+EPSILON="epsilon"
+SAMPLE="sample"
 
 def inference(unet:UNet2DConditionModel,
               text_encoder:CLIPTextModel,
@@ -131,7 +134,7 @@ def main(args):
     pipe=DiffusionPipeline.from_pretrained(BASE_REPO)
     vae=pipe.vae.to(device)
     text_encoder=pipe.text_encoder.to(device)
-    scheduler=DDIMScheduler()
+    scheduler=DDIMScheduler(prediction_type=args.prediction_type)
     scheduler.set_timesteps(args.num_inference_steps)
     tokenizer = CLIPTokenizer.from_pretrained(
         BASE_REPO, subfolder="tokenizer"
@@ -335,7 +338,7 @@ def main(args):
                 timesteps = torch.randint(0, scheduler.config.num_train_timesteps, (bsz,), device=real_latents.device)
         
                 input_latents=scheduler.add_noise(real_latents,noise,timesteps.long())
-                output_latents=noise #noise predicetion - we COULD do velocity but does it rlly make a difference? not sure TODO: add velocity prediction
+                
             else:
                 if args.timesteps==CONTINUOUS_SCALE:
                     scales=[int((args.dim)*random.random()) for r in range(bsz)]
@@ -350,14 +353,20 @@ def main(args):
                     timesteps=torch.tensor([int(scheduler.config.num_train_timesteps*s/(len(dims))) for s in scales]).long()
                 
                 input_latents=vae.encode(torch.stack(scaled_images).to(device)).latent_dist.sample()
-                output_latents=real_latents
+                noise=input_latents -real_latents #the "noise"
+            if args.prediction_type==EPSILON:
+                target_latents=noise
+            elif args.prediction_type==SAMPLE:
+                target_latents=real_latents
+            elif args.prediction_type==VELOCITY:
+                target_latents = scheduler.get_velocity(real_latents, noise, timesteps)
                 
             if training:
                 with accelerator.accumulate(params):
                     with accelerator.autocast():
                         
                         predicted=unet(input_latents,timesteps,encoder_hidden_states=encoder_hidden_states,return_dict=False)[0]
-                        loss=F.mse_loss(predicted.float(),output_latents.float())
+                        loss=F.mse_loss(predicted.float(),target_latents.float())
                         accelerator.backward(loss)
                         optimizer.step()
                         optimizer.zero_grad()
@@ -470,6 +479,7 @@ if __name__=='__main__':
     parser.add_argument("--rank",type=int,default=4)
     parser.add_argument("--n_test",type=int,default=5)
     parser.add_argument("--dest_dataset",type=str,default="jlbaker361/test-scale-images")
+    parser.add_argument("--prediction_type",type=str,help=f" one of {VELOCITY}, {EPSILON} or {SAMPLE}")
     args=parse_args(parser)
     print(args)
     main(args)

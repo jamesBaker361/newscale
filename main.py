@@ -408,11 +408,14 @@ def main(args):
                 for key,score in zip(["ssim","psnr","lpips_in","lpips_out","fid_in","fid_out"],
                                      [ssim_score,psnr_score,lpips_score_in,lpips_score_out,fid_score_in,fid_score_out]):
                     test_metric_dict[key].append(score.cpu().detach().numpy())
+    batch_function()
     accelerator.free_memory()
     
     
     
     with torch.no_grad():
+        print("generation task beginning")
+        start=time.time()
         k=0
         output_dict={
             "image":[],
@@ -446,8 +449,11 @@ def main(args):
         }
         print(test_metric_dict)
         accelerator.log(test_metric_dict)
+        generation_end=time.time()
+        
+        print("generation task elapsed, ",generation_end-start)
             
-    batch_function()
+    
 
 if __name__=='__main__':
     print_details()

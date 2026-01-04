@@ -327,7 +327,7 @@ def main(args):
                 token_ids= tokenizer(
                     [" "]*bsz, max_length=tokenizer.model_max_length, padding="max_length", truncation=True, return_tensors="pt"
                 ).input_ids
-            encoder_hidden_states=text_encoder(token_ids, return_dict=False)[0]
+            encoder_hidden_states=text_encoder(token_ids.to(device), return_dict=False)[0]
 
             
             if args.timesteps==CONTINUOUS_NOISE:

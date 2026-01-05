@@ -352,8 +352,9 @@ def main(args):
                     scaled_images=[T.Resize(args.dim)(T.Resize(dims[j])(img)) for j,img in zip(scales,images) ]
                     timesteps=torch.tensor([int(scheduler.config.num_train_timesteps*s/(len(dims))) for s in scales]).long()
                 
-                print('bsz',bsz,'input_latents.size()',input_latents.size(),'torch.stack(scaled_images)',torch.stack(scaled_images).size(),)
+                
                 input_latents=vae.encode(torch.stack(scaled_images).to(device)).latent_dist.sample()
+                print('bsz',bsz,'input_latents.size()',input_latents.size(),'torch.stack(scaled_images)',torch.stack(scaled_images).size(),)
                 noise=input_latents -real_latents #the "noise"
             if args.prediction_type==EPSILON:
                 target_latents=noise

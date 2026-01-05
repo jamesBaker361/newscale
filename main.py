@@ -45,6 +45,9 @@ BASE_REPO="SimianLuo/LCM_Dreamshaper_v7"
 VELOCITY="v_prediction"
 EPSILON="epsilon"
 SAMPLE="sample"
+MINI_IMAGE="miniimagenet"
+SUN397="sun"
+AFHQ="afhq"
 
 def inference(unet:UNet2DConditionModel,
               text_encoder:CLIPTextModel,
@@ -142,19 +145,21 @@ def main(args):
     )
     
     image_processor=VaeImageProcessor()
-    if args.src_dataset.lower()=="afhq":
+    if args.src_dataset.lower()==AFHQ:
         train_dataset=AFHQDataset(split="train",dim=args.dim)
         test_dataset=AFHQDataset(split="val",dim=args.dim)
         # Split the dataset
         train_dataset,val_dataset=random_split(train_dataset,[0.9,0.1])
-    elif args.src_dataset.lower()=="miniimagenet":
+    elif args.src_dataset.lower()==MINI_IMAGE:
         train_dataset=MiniImageNet(split="train",dim=args.dim)
         test_dataset=MiniImageNet(split="test",dim=args.dim)
         val_dataset=MiniImageNet(split="val",dim=args.dim)
-    elif args.src_dataset.lower()=="sun":
+    elif args.src_dataset.lower()==SUN397:
         train_dataset=SUNDataset(split="train",dim=args.dim)
         test_dataset=SUNDataset(split="test",dim=args.dim)
         train_dataset,val_dataset=random_split(train_dataset,[0.9,0.1])
+    else:
+        print("Unknown dataset ",args.src_dataset)
         
         
     train_loader=DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
@@ -187,6 +192,7 @@ def main(args):
         }
         weights_name="lora_weights.safetensors"
         def save():
+            print("saving lora")
             state_dict=get_peft_model_state_dict(unet)
             
             save_path=os.path.join(save_subdir,weights_name)
@@ -323,6 +329,12 @@ def main(args):
         _images=_images.to(torch.uint8)
         
         return _images
+    
+    if args.none_save:
+        print("SAVING IS DISABLED- only do this if debugging!!!")
+        def save():
+            print("empty save function for debugging :)")
+            return
     
     @optimization_loop(accelerator,train_loader,args.epochs,args.val_interval,args.limit,val_loader,
                        test_loader,save,start_epoch)
@@ -502,7 +514,8 @@ if __name__=='__main__':
     parser.add_argument("--n_test",type=int,default=5)
     parser.add_argument("--dest_dataset",type=str,default="jlbaker361/test-scale-images")
     parser.add_argument("--prediction_type",type=str,help=f" one of {VELOCITY}, {EPSILON} or {SAMPLE}",default=EPSILON)
-    parser.add_argument("--src_dataset",type=str,default="afhq")
+    parser.add_argument("--src_dataset",type=str,default=AFHQ,help=f"one of {SUN397}, {AFHQ} or {MINI_IMAGE}")
+    parser.add_argument("--none_save",action="store_true",help="disable saving (for debugging)")
     args=parse_args(parser)
     print(args)
     main(args)

@@ -491,7 +491,7 @@ def main(args):
         fid_metric.update(normalize(gen_images),False)
         test_metric_dict["fid_gen"].append(fid_metric.compute().cpu().detach().numpy())
         
-        inception_metric.update(gen_images)
+        inception_metric.update(normalize(gen_images))
         test_metric_dict["incept"].append(inception_metric.compute())
         
         test_metric_dict={

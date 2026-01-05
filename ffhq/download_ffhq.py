@@ -159,7 +159,7 @@ def download_files(file_specs, num_threads=32, status_delay=0.2, timing_window=5
     done_specs = {spec['file_path']: spec for spec in file_specs if os.path.isfile(spec['file_path'])}
     missing_specs = [spec for spec in file_specs if spec['file_path'] not in done_specs]
     files_total = len(file_specs)
-    bytes_total = sum(spec['file_size'] for spec in file_specs)
+    bytes_total = sum(spec['file_size'] for spec in file_specs if "file_size" in spec)
     stats = dict(files_done=len(done_specs), bytes_done=sum(spec['file_size'] for spec in done_specs.values()), lock=threading.Lock())
     if len(done_specs) == files_total:
         print('All files already downloaded -- skipping.')

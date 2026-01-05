@@ -481,7 +481,8 @@ def main(args):
                 output_dict["caption"].append(cap)
             accelerator.free_memory()
         gen_images=torch.cat(gen_images)
-        Dataset.from_dict(output_dict).push_to_hub(args.dest_dataset)
+        if args.no_upload is False:
+            Dataset.from_dict(output_dict).push_to_hub(args.dest_dataset)
         fid_metric.update(normalize(real_images),True)
         fid_metric.update(normalize(gen_images),False)
         test_metric_dict["fid_gen"].append(fid_metric.compute().cpu().detach().numpy())
@@ -518,6 +519,7 @@ if __name__=='__main__':
     parser.add_argument("--prediction_type",type=str,help=f" one of {VELOCITY}, {EPSILON} or {SAMPLE}",default=EPSILON)
     parser.add_argument("--src_dataset",type=str,default=AFHQ,help=f"one of {SUN397}, {AFHQ} or {MINI_IMAGE}")
     parser.add_argument("--none_save",action="store_true",help="disable saving (for debugging)")
+    parser.add_argument("--no_upload",action="store_true",help="dont upload anything (for debugging)")
     args=parse_args(parser)
     print(args)
     main(args)

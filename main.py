@@ -317,8 +317,7 @@ def main(args):
         
         bsz=len(images)
         
-        if misc_dict["epochs"]==start_epoch and misc_dict["b"]==0:
-            print("imgease size ",images.size())
+        
         if misc_dict["mode"] in ["train","val"]:
             real_latents=vae.encode(images.to(device)).latent_dist.sample()
             real_latents*=vae.config.scaling_factor
@@ -344,17 +343,17 @@ def main(args):
                     scales=[int((args.dim)*random.random()) for r in range(bsz)]
                     #scaled_images=[img.resize((args.dim-r,args.dim-r)).resize((args.dim,args.dim)) for r,img in zip(scales,images)]
                     scaled_images=[T.Resize(args.dim)(T.Resize(args.dim-r)(img)) for r,img in zip(scales,images) ]
-                    timesteps=torch.tensor([int(scheduler.config.num_train_timesteps*s/(args.dim-1)) for s in scales]).long()
+                    timesteps=torch.tensor([int(scheduler.config.num_train_timesteps*s/(args.dim-1)) for s in scales],device=device).long()
                     
                 if args.timesteps==DISCRETE_SCALE:
                     scales=random.choices([j for j in range(len(dims))],k=bsz)
                     #scaled_images=[img.resize((dims[j],dims[j])).resize((args.dim,args.dim)) for j,img in zip(scales,images)]
                     scaled_images=[T.Resize(args.dim)(T.Resize(dims[j])(img)) for j,img in zip(scales,images) ]
-                    timesteps=torch.tensor([int(scheduler.config.num_train_timesteps*s/(len(dims))) for s in scales]).long()
+                    timesteps=torch.tensor([int(scheduler.config.num_train_timesteps*s/(len(dims))) for s in scales],device=device).long()
                 
                 
                 input_latents=vae.encode(torch.stack(scaled_images).to(device)).latent_dist.sample()
-                print('bsz',bsz,'input_latents.size()',input_latents.size(),'torch.stack(scaled_images)',torch.stack(scaled_images).size(),'real latensts' ,real_latents.size())
+                #print('bsz',bsz,'input_latents.size()',input_latents.size(),'torch.stack(scaled_images)',torch.stack(scaled_images).size(),'real latensts' ,real_latents.size())
                 noise=input_latents -real_latents #the "noise"
             if args.prediction_type==EPSILON:
                 target_latents=noise
@@ -362,6 +361,10 @@ def main(args):
                 target_latents=real_latents
             elif args.prediction_type==VELOCITY:
                 target_latents = scheduler.get_velocity(real_latents, noise, timesteps)
+                
+            if misc_dict["epochs"]==start_epoch and misc_dict["b"]==0:
+                for name,t in zip(['timesteps','target_latents','images','input_latents'],[timesteps,target_latents,images,input_latents]):
+                    print(name,t.size(),t.device)
                 
             if training:
                 with accelerator.accumulate(params):

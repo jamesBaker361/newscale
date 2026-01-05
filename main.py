@@ -437,6 +437,8 @@ def main(args):
                     f"{misc_dict['mode']}_{k+count}":wandb.Image(concat_images_horizontally([inp,outp,super,real]))
                 })
             if misc_dict["mode"]=="test":
+                for name,metric in zip(['ssim_metric','psnr_metric','lpips_metric','fid_metric'],[ssim_metric,psnr_metric,lpips_metric,fid_metric]):
+                    print(name,metric,metric.device)
                 ssim_score=ssim_metric(super_res,images,) #ssim(preds, target)
                 psnr_score=psnr_metric(super_res,images)
                 lpips_score_in=lpips_metric(gen_inpaint,images)

@@ -90,6 +90,7 @@ def download_file(session, file_spec, stats, chunk_size=128, num_attempts=10, **
             break
 
         except:
+            print(attempts_left,tmp_path)
             with stats['lock']:
                 stats['bytes_done'] -= data_size
 
@@ -113,6 +114,7 @@ def download_file(session, file_spec, stats, chunk_size=128, num_attempts=10, **
 
             # Last attempt => raise error.
             if not attempts_left:
+                
                 raise
 
     # Rename temp file to the correct name.

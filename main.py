@@ -485,7 +485,7 @@ def main(args):
             Dataset.from_dict(output_dict).push_to_hub(args.dest_dataset)
             
         print("fid ",fid_metric.device)
-        print("icpetion",inception_metric.size())
+        print("icpetion",inception_metric.device)
         print("gen,real",gen_images.device,real_images.device)
         fid_metric.update(normalize(real_images),True)
         fid_metric.update(normalize(gen_images),False)

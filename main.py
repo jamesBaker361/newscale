@@ -314,6 +314,7 @@ def main(args):
     print("iteration dims",iteration_dims)
     
     mask_super_res=Image.open(os.path.join("data","datasets","gt_keep_masks","nn2","000000.png")).convert("L")
+    mask_super_res_pt=T.ToTensor()(mask_super_res.resize((args.dim//8,args.dim//8)))
     mask_outpaint=Image.open(os.path.join("data","datasets","gt_keep_masks","ex64","000000.png")).convert("L")
     
     mask_outpaint_pt=T.ToTensor()(mask_outpaint.resize((args.dim//8,args.dim//8)))
@@ -420,7 +421,7 @@ def main(args):
             super_res=inference(unet,text_encoder,
                                   tokenizer,vae,
                                   image_processor,scheduler,args.num_inference_steps,args,
-                                  captions,device,bsz,dims, "pt",mask_super_res, images)
+                                  captions,device,bsz,dims, "pt",mask_super_res_pt, images)
             
             batch_num=misc_dict["b"]
             count=args.batch_size*batch_num

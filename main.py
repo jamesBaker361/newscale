@@ -1,16 +1,17 @@
 from experiment_helpers.gpu_details import print_details
 from experiment_helpers.init_helpers import parse_args,default_parser,repo_api_init
 from experiment_helpers.image_helpers import concat_images_horizontally
-from experiment_helpers.data_helpers import split_data
+
 from experiment_helpers.saving_helpers import save_and_load_functions,CONFIG_NAME
 from experiment_helpers.loop_decorator import optimization_loop
 from diffusers import UNet2DConditionModel,AutoencoderKL,DiffusionPipeline,DDIMScheduler
+from torch.utils.data import Dataset, DataLoader,random_split
 from diffusers.image_processor import VaeImageProcessor
 from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion import retrieve_timesteps
 from diffusers.models.attention_processor import  IPAdapterAttnProcessor, IPAdapterAttnProcessor2_0, IPAdapterXFormersAttnProcessor,Attention
 from transformers import CLIPTokenizer,CLIPTextModel
 import time
-from data_helpers import AFHQDataset
+from data_helpers import AFHQDataset,SUNDataset,MiniImageNet
 import torch
 from torch.utils.data import Dataset, DataLoader,random_split
 import torch.nn.functional as F
@@ -141,12 +142,27 @@ def main(args):
     )
     
     image_processor=VaeImageProcessor()
-    train_dataset=AFHQDataset(split="train",dim=args.dim)
-    test_dataset=AFHQDataset(split="val",dim=args.dim)
+    if args.src_dataset.lower()=="afhq":
+        train_dataset=AFHQDataset(split="train",dim=args.dim)
+        test_dataset=AFHQDataset(split="val",dim=args.dim)
+        # Split the dataset
+        train_dataset,val_dataset=random_split(train_dataset,[0.9,0.1])
+    elif args.src_dataset.lower()=="miniimagenet":
+        train_dataset=MiniImageNet(split="train",dim=args.dim)
+        test_dataset=MiniImageNet(split="test",dim=args.dim)
+        val_dataset=MiniImageNet(split="val",dim=args.dim)
+    elif args.src_dataset.lower()=="sun":
+        train_dataset=SUNDataset(split="train",dim=args.dim)
+        test_dataset=SUNDataset(split="test",dim=args.dim)
+        train_dataset,val_dataset=random_split(train_dataset,[0.9,0.1])
+        
+        
+    train_loader=DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
+    val_loader=DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False)
+    test_loader=DataLoader(test_dataset,batch_size=args.batch_size, shuffle=False)
     
-    # Split the dataset
-    train_loader,_,val_loader=split_data(train_dataset,0.9,args.batch_size)
-    test_loader=DataLoader(test_dataset)
+        
+        
     for batch in train_loader:
         break
     save_subdir=os.path.join("scale",args.repo_id)
@@ -486,6 +502,7 @@ if __name__=='__main__':
     parser.add_argument("--n_test",type=int,default=5)
     parser.add_argument("--dest_dataset",type=str,default="jlbaker361/test-scale-images")
     parser.add_argument("--prediction_type",type=str,help=f" one of {VELOCITY}, {EPSILON} or {SAMPLE}",default=EPSILON)
+    parser.add_argument("--src_dataset",type=str,default="afhq")
     args=parse_args(parser)
     print(args)
     main(args)

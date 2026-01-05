@@ -81,7 +81,7 @@ def inference(unet:UNet2DConditionModel,
     latents=None
     if src_image is not None:
         latents=vae.encode(src_image.to(device)).latent_dist.sample()*vae.config.scaling_factor
-        if mask:
+        if mask is not None:
             latents=mask*latents
     
     if args.timesteps==CONTINUOUS_NOISE:

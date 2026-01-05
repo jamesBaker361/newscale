@@ -484,7 +484,7 @@ if __name__=='__main__':
     parser.add_argument("--rank",type=int,default=4)
     parser.add_argument("--n_test",type=int,default=5)
     parser.add_argument("--dest_dataset",type=str,default="jlbaker361/test-scale-images")
-    parser.add_argument("--prediction_type",type=str,help=f" one of {VELOCITY}, {EPSILON} or {SAMPLE}")
+    parser.add_argument("--prediction_type",type=str,help=f" one of {VELOCITY}, {EPSILON} or {SAMPLE}",default=EPSILON)
     args=parse_args(parser)
     print(args)
     main(args)

@@ -141,8 +141,8 @@ def main(args):
     )
     
     image_processor=VaeImageProcessor()
-    train_dataset=AFHQDataset(split="train")
-    test_dataset=AFHQDataset(split="val")
+    train_dataset=AFHQDataset(split="train",dim=args.dim)
+    test_dataset=AFHQDataset(split="val",dim=args.dim)
     
     # Split the dataset
     train_loader,_,val_loader=split_data(train_dataset,0.9,args.batch_size)

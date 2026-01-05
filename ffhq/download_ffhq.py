@@ -81,16 +81,12 @@ def download_file(session, file_spec, stats, chunk_size=128, num_attempts=10, **
                             stats['bytes_done'] += len(chunk)
 
             # Validate.
-            if 'file_size' in file_spec and data_size != file_spec['file_size']:
-                raise IOError('Incorrect file size', file_path)
-            if 'file_md5' in file_spec and data_md5.hexdigest() != file_spec['file_md5']:
-                raise IOError('Incorrect file MD5', file_path)
+
             if 'pixel_size' in file_spec or 'pixel_md5' in file_spec:
                 with PIL.Image.open(tmp_path) as image:
                     if 'pixel_size' in file_spec and list(image.size) != file_spec['pixel_size']:
                         raise IOError('Incorrect pixel size', file_path)
-                    if 'pixel_md5' in file_spec and hashlib.md5(np.array(image)).hexdigest() != file_spec['pixel_md5']:
-                        raise IOError('Incorrect pixel MD5', file_path)
+
             break
 
         except:

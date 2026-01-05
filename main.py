@@ -288,14 +288,14 @@ def main(args):
     #FID Heusel (2017) and IS Salimans (2016). For zero-shot editing tasks we report: LPIPS Zhang et al. (2018) and FID for in/out-painting, and PSNR and SSIM for super-resolution
     
     test_metric_dict={
-        "psnr":0,
-        "ssim":0,
-        "lpips_out":0,
-        "fid_out":0,
-        "lpips_in":0,
-        "fid_in":0,
-        "fid_gen":0,
-        "incept":0
+        "psnr":[],
+        "ssim":[],
+        "lpips_out":[],
+        "fid_out":[],
+        "lpips_in":[],
+        "fid_in":[],
+        "fid_gen":[],
+        "incept":[]
     }
     
     ssim_metric=StructuralSimilarityIndexMeasure(data_range=(-1.0,1.0)).to(device)

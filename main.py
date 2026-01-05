@@ -354,7 +354,7 @@ def main(args):
                 
                 
                 input_latents=vae.encode(torch.stack(scaled_images).to(device)).latent_dist.sample()
-                print('bsz',bsz,'input_latents.size()',input_latents.size(),'torch.stack(scaled_images)',torch.stack(scaled_images).size(),)
+                print('bsz',bsz,'input_latents.size()',input_latents.size(),'torch.stack(scaled_images)',torch.stack(scaled_images).size(),'real latensts' ,real_latents.size())
                 noise=input_latents -real_latents #the "noise"
             if args.prediction_type==EPSILON:
                 target_latents=noise

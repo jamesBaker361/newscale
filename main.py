@@ -378,6 +378,7 @@ def main(args):
             else:
                 predicted=unet(input_latents,timesteps,encoder_hidden_states=encoder_hidden_states,return_dict=False)[0]
                 loss=F.mse_loss(predicted.float(),real_latents.float())
+            loss=loss.cpu().detach().numpy()
         if misc_dict["mode"] in ["test","val"]:
             #inpainting
             gen_inpaint=inference(unet,text_encoder,
@@ -422,6 +423,7 @@ def main(args):
                 for key,score in zip(["ssim","psnr","lpips_in","lpips_out","fid_in","fid_out"],
                                      [ssim_score,psnr_score,lpips_score_in,lpips_score_out,fid_score_in,fid_score_out]):
                     test_metric_dict[key].append(score.cpu().detach().numpy())
+        return loss            
     batch_function()
     accelerator.free_memory()
     

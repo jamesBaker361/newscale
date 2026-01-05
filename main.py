@@ -298,11 +298,11 @@ def main(args):
         "incept":0
     }
     
-    ssim_metric=StructuralSimilarityIndexMeasure(data_range=(-1.0,1.0))
-    psnr_metric=PeakSignalNoiseRatio(data_range=(-1.0,1.0))
-    lpips_metric=LearnedPerceptualImagePatchSimilarity(net_type='squeeze')
-    fid_metric=FrechetInceptionDistance(feature=64,normalize=False) #expects images in [0,255]
-    inception_metric=InceptionScore(normalize=False) #expects images in [0,255]
+    ssim_metric=StructuralSimilarityIndexMeasure(data_range=(-1.0,1.0)).to(device)
+    psnr_metric=PeakSignalNoiseRatio(data_range=(-1.0,1.0)).to(device)
+    lpips_metric=LearnedPerceptualImagePatchSimilarity(net_type='squeeze').to(device)
+    fid_metric=FrechetInceptionDistance(feature=64,normalize=False).to(device) #expects images in [0,255]
+    inception_metric=InceptionScore(normalize=False).to(device) #expects images in [0,255]
     
     dims=[1]
     while dims[-1]!=args.dim:
@@ -437,7 +437,7 @@ def main(args):
                     f"{misc_dict['mode']}_{k+count}":wandb.Image(concat_images_horizontally([inp,outp,super,real]))
                 })
             if misc_dict["mode"]=="test":
-                ssim_score=ssim_metric(super_res,images) #ssim(preds, target)
+                ssim_score=ssim_metric(super_res,images,) #ssim(preds, target)
                 psnr_score=psnr_metric(super_res,images)
                 lpips_score_in=lpips_metric(gen_inpaint,images)
                 lpips_score_out=lpips_metric(gen_outpaint,images)

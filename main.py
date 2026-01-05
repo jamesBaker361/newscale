@@ -60,7 +60,7 @@ def inference(unet:UNet2DConditionModel,
               dims:list,
               output_type:str,
               mask:torch.Tensor=None,
-              src_image:torch.Tensor=None #for super resolution
+              src_image:torch.Tensor=None #for super resolution adn in/outpainting
               ):
     if args.text_conditional:
         if type(captions)==str:
@@ -75,7 +75,7 @@ def inference(unet:UNet2DConditionModel,
 
         
     latents=None
-    if src_image:
+    if src_image is not None:
         latents=vae.encode(src_image.to(device)).latent_dist.sample()*vae.config.scaling_factor
         if mask:
             latents=mask*latents

@@ -82,7 +82,7 @@ def inference(unet:UNet2DConditionModel,
     if src_image is not None:
         latents=vae.encode(src_image.to(device)).latent_dist.sample()*vae.config.scaling_factor
         if mask is not None:
-            latents=mask*latents
+            latents=mask.to(device)*latents
     
     if args.timesteps==CONTINUOUS_NOISE:
         if latents is None:
@@ -100,7 +100,7 @@ def inference(unet:UNet2DConditionModel,
             timesteps,num_inference_steps=retrieve_timesteps(scheduler,num_inference_steps,device=device)
             
         if args.timesteps==DISCRETE_SCALE:
-            timesteps=[torch.tensor(t).long() for t in dims]
+            timesteps=[torch.tensor(t,device=device).long() for t in dims]
             
     with tqdm(total=num_inference_steps) as progress_bar:
         for i,t in enumerate(timesteps):
@@ -125,9 +125,6 @@ def inference(unet:UNet2DConditionModel,
     return image
         
         
-        
-    
-
 
 
 def main(args):

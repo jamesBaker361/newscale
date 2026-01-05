@@ -492,7 +492,7 @@ def main(args):
         test_metric_dict["fid_gen"].append(fid_metric.compute().cpu().detach().numpy())
         
         inception_metric.update(normalize(gen_images))
-        test_metric_dict["incept"].append(inception_metric.compute())
+        test_metric_dict["incept"].append(inception_metric.compute().cpu().detach().numpy())
         
         test_metric_dict={
             key:np.mean(value) for key,value in test_metric_dict.items()

@@ -483,6 +483,10 @@ def main(args):
         gen_images=torch.cat(gen_images)
         if args.no_upload is False:
             Dataset.from_dict(output_dict).push_to_hub(args.dest_dataset)
+            
+        print("fid ",fid_metric.device)
+        print("icpetion",inception_metric.size())
+        print("gen,real",gen_images.device,real_images.device)
         fid_metric.update(normalize(real_images),True)
         fid_metric.update(normalize(gen_images),False)
         test_metric_dict["fid_gen"].append(fid_metric.compute().cpu().detach().numpy())

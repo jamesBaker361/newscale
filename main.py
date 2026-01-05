@@ -487,7 +487,7 @@ def main(args):
         print("fid ",fid_metric.device)
         print("icpetion",inception_metric.device)
         print("gen,real",gen_images.device,real_images.device)
-        fid_metric.update(normalize(real_images),True)
+        fid_metric.update(normalize(real_images.to(device)),True)
         fid_metric.update(normalize(gen_images),False)
         test_metric_dict["fid_gen"].append(fid_metric.compute().cpu().detach().numpy())
         

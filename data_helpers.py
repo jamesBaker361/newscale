@@ -9,6 +9,8 @@ import torchvision
 import json
 
 
+
+
 class MaskDataset(Dataset):
     def __init__(self):
         super().__init__()
@@ -31,8 +33,33 @@ class MaskDataset(Dataset):
         mask=self.image_processor.numpy_to_pt(mask)
         return mask #we DONT want to normalize so we do this
         
-
-
+class FFHQDataset(MaskDataset):
+    def __init__(self,dim:int=256,split:str="train"):
+        super().__init__()
+        lite_json=json.load(open("ffhq_lite.json","r")) #{'training', 'validation'}
+        new_lite_json={
+            k:set(v) for k,v in lite_json.items()
+        }
+        key={"train":"training","test":"validation"}[split]
+        base_dir="images1024x1024"
+        for subdir in os.listdir(base_dir):
+            if os.path.isdir(subdir):
+                subdir_path=os.path.join(base_dir,subdir)
+                for img in os.listdir(subdir_path):
+                    if img.endswith("png"):
+                        img_path=os.path.join(subdir_path,img)
+                        if img_path in new_lite_json[key]:
+                            self.img_list.append(os.path.join(subdir_path,img))
+                            self.cat_list.append("face")
+        
+        
+    def __getitem__(self, index):
+        return {
+            "image":self.image_processor.preprocess([Image.open(self.img_list[index]).resize((self.dim,self.dim))])[0],
+            "caption":self.cat_list[index],
+            "mask":self.get_mask(),
+            #"mask_out":Image.open(self.mask_list[random.randint(0,len(self.mask_list-1))]).convert("L").resize((self.dim,self.dim))
+        }
 
 class MiniImageNet(MaskDataset):
     def __init__(self,split:str="train",dim:int=256,limit_per_class:int=-1):
@@ -132,3 +159,10 @@ class AFHQDataset(MaskDataset):
             "mask":self.get_mask(),
             #"mask_out":Image.open(self.mask_list[random.randint(0,len(self.mask_list-1))]).convert("L").resize((self.dim,self.dim))
         }
+
+if __name__=="__main__":
+    for split in ["train","test"]:
+        data=FFHQDataset(split=split)
+        for batch in data:
+            break
+        print(split,len(data))

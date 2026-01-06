@@ -423,6 +423,8 @@ def main(args):
                                   image_processor,scheduler,args.num_inference_steps,args,
                                   captions,device,bsz,dims, "pt",mask_super_res_pt, images)
             
+            accelerator.free_memory()
+            
             batch_num=misc_dict["b"]
             count=args.batch_size*batch_num
             

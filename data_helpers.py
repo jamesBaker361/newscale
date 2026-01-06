@@ -166,3 +166,19 @@ if __name__=="__main__":
         for batch in data:
             break
         print(split,len(data))
+    lite_json=json.load(open("ffhq_lite.json","r")) #{'training', 'validation'}
+    new_lite_json={
+        k:set(v) for k,v in lite_json.items()
+    }
+    
+    for k,v in new_lite_json.items():
+        print(k, [_v for _v in v][:10])
+    base_dir="images1024x1024"
+    for subdir in os.listdir(base_dir):
+        if os.path.isdir(subdir):
+            subdir_path=os.path.join(base_dir,subdir)
+            for img in os.listdir(subdir_path):
+                if img.endswith("png"):
+                    img_path=os.path.join(subdir_path,img)
+                    print(img_path)
+    

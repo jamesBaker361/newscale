@@ -33,6 +33,90 @@ class MaskDataset(Dataset):
         mask=self.image_processor.numpy_to_pt(mask)
         return mask #we DONT want to normalize so we do this
         
+        
+class CIFAR10Dataset(MaskDataset):   
+    def __init__(self, split="train", dim=256, limit_per_class=150):
+        super().__init__()
+        self.dim = dim
+
+        self.data = load_dataset("uoft-cs/cifar10", split=split)
+        self.data = self.data.cast_column("image", datasets.Image())
+
+        class_mapping = json.load(open("sun397_class_index.json"))
+
+        self.indices = []
+        self.cat_list = []
+        self.label_count = defaultdict(int)
+
+        for i, row in enumerate(self.data):
+            label = row["label"]
+
+            if limit_per_class>0 and self.label_count[label] >= limit_per_class:
+                continue
+
+            self.indices.append(i)
+            self.cat_list.append(label)
+            self.label_count[label] += 1
+
+        self.cat_set = set(self.cat_list)
+
+    def __getitem__(self, idx):
+        row = self.data[self.indices[idx]]
+        image = row["image"].resize((self.dim, self.dim))
+        if image.mode != "RGB":
+            image = image.convert("RGB")
+
+        return {
+            "image": self.image_processor.preprocess([image])[0],
+            "caption": self.cat_list[idx],
+            "mask": self.get_mask(),
+        }
+
+    def __len__(self):
+        return len(self.indices)   
+    
+    
+class CIFAR100Dataset(MaskDataset):   
+    def __init__(self, split="train", dim=256, limit_per_class=150):
+        super().__init__()
+        self.dim = dim
+
+        self.data = load_dataset("uoft-cs/cifar100", split=split)
+        self.data = self.data.cast_column("image", datasets.Image())
+
+        class_mapping = json.load(open("sun397_class_index.json"))
+
+        self.indices = []
+        self.cat_list = []
+        self.label_count = defaultdict(int)
+
+        for i, row in enumerate(self.data):
+            label = row["label"]
+
+            if limit_per_class>0 and self.label_count[label] >= limit_per_class:
+                continue
+
+            self.indices.append(i)
+            self.cat_list.append(label)
+            self.label_count[label] += 1
+
+        self.cat_set = set(self.cat_list)
+
+    def __getitem__(self, idx):
+        row = self.data[self.indices[idx]]
+        image = row["image"].resize((self.dim, self.dim))
+        if image.mode != "RGB":
+            image = image.convert("RGB")
+
+        return {
+            "image": self.image_processor.preprocess([image])[0],
+            "caption": self.cat_list[idx],
+            "mask": self.get_mask(),
+        }
+
+    def __len__(self):
+        return len(self.indices)         
+        
 class FFHQDataset(MaskDataset):
     def __init__(self,dim:int=256,split:str="train"):
         super().__init__()

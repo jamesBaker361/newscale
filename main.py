@@ -11,7 +11,7 @@ from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion import retri
 from diffusers.models.attention_processor import  IPAdapterAttnProcessor, IPAdapterAttnProcessor2_0, IPAdapterXFormersAttnProcessor,Attention
 from transformers import CLIPTokenizer,CLIPTextModel
 import time
-from data_helpers import AFHQDataset,SUNDataset,MiniImageNet,FFHQDataset
+from data_helpers import AFHQDataset,SUNDataset,MiniImageNet,FFHQDataset,CIFAR100Dataset,CIFAR10Dataset
 import torch
 from torch.utils.data import Dataset, DataLoader,random_split
 import torch.nn.functional as F
@@ -49,6 +49,8 @@ MINI_IMAGE="miniimagenet"
 SUN397="sun"
 AFHQ="afhq"
 FFHQ="ffhq"
+C10="cifar10"
+C100="cifar100"
 
 def inference(unet:UNet2DConditionModel,
               text_encoder:CLIPTextModel,
@@ -65,7 +67,8 @@ def inference(unet:UNet2DConditionModel,
               dims:list,
               output_type:str,
               mask:torch.Tensor=None,
-              src_image:torch.Tensor=None #for super resolution adn in/outpainting
+              src_image:torch.Tensor=None, #for super resolution adn in/outpainting
+              no_latents:bool=False
               ):
     if args.text_conditional:
         if type(captions)==str:
@@ -94,7 +97,10 @@ def inference(unet:UNet2DConditionModel,
     else:
         img = [Image.new("RGB", (args.dim, args.dim), tuple(random.randint(0, 255) for _ in range(3))) for _ in range(bsz)]
         if latents is None:
-            latents=vae.encode(image_processor.preprocess(img).to(device)).latent_dist.sample()*vae.config.scaling_factor
+            if no_latents:
+                latents=image_processor.preprocess(img).to(device)
+            else:
+                latents=vae.encode(image_processor.preprocess(img).to(device)).latent_dist.sample()*vae.config.scaling_factor
 
         
         if args.timesteps==CONTINUOUS_SCALE:
@@ -121,8 +127,11 @@ def inference(unet:UNet2DConditionModel,
             latents = scheduler.step(noise_pred, t, latents, return_dict=False)[0]
             
             progress_bar.update()
-    image = vae.decode(latents / vae.config.scaling_factor, return_dict=False, )[0]
     image = image_processor.postprocess(image,output_type=output_type)
+    if no_latents:
+        return image
+    image = vae.decode(latents / vae.config.scaling_factor, return_dict=False, )[0]
+    
     return image
         
         
@@ -134,8 +143,13 @@ def main(args):
         device=torch.device("cpu")
     print("device ",device)
     pipe=DiffusionPipeline.from_pretrained(BASE_REPO)
+    
     vae=pipe.vae.to(device)
+    if args.no_latent:
+        vae.cpu()
     text_encoder=pipe.text_encoder.to(device)
+    vae.requires_grad_(False)
+    text_encoder.requires_grad_(False)
     scheduler=DDIMScheduler(prediction_type=args.prediction_type)
     scheduler.set_timesteps(args.num_inference_steps)
     tokenizer = CLIPTokenizer.from_pretrained(
@@ -160,6 +174,15 @@ def main(args):
         train_dataset=FFHQDataset(split="train",dim=args.dim)
         train_dataset,val_dataset=random_split(train_dataset,[0.9,0.1])
         test_dataset=FFHQDataset(split="test",dim=args.dim)
+        
+    elif args.src_dataset.lower()==C10:
+        train_dataset=CIFAR10Dataset(split="train",dim=args.dim)
+        test_dataset=CIFAR10Dataset(split="test",dim=args.dim)
+        train_dataset,val_dataset=random_split(train_dataset,[0.9,0.1])
+    elif args.src_dataset.lower()==C100:
+        train_dataset=CIFAR100Dataset(split="train",dim=args.dim)
+        test_dataset=CIFAR100Dataset(split="test",dim=args.dim)
+        train_dataset,val_dataset=random_split(train_dataset,[0.9,0.1])
     else:
         print("Unknown dataset ",args.src_dataset)
         
@@ -311,9 +334,13 @@ def main(args):
     psnr_metric=PeakSignalNoiseRatio(data_range=(-1.0,1.0)).to(device)
     lpips_metric=LearnedPerceptualImagePatchSimilarity(net_type='squeeze').to(device)
     
+    if args.no_latent:
+        final_dim=args.dim
+    else:
+        final_dim=args.dim//8
     
     dims=[1]
-    while dims[-1]!=args.dim:
+    while dims[-1]!=final_dim:
         dims.append(2*dims[-1])
         
     dims=dims[::-1]
@@ -357,8 +384,11 @@ def main(args):
         
         
         if misc_dict["mode"] in ["train","val"]:
-            real_latents=vae.encode(images.to(device)).latent_dist.sample()
-            real_latents*=vae.config.scaling_factor
+            if args.no_latent:
+                real_latents=images
+            else:
+                real_latents=vae.encode(images.to(device)).latent_dist.sample()
+                real_latents*=vae.config.scaling_factor
             if args.text_conditional:
                 token_ids= tokenizer(
                     captions, max_length=tokenizer.model_max_length, padding="max_length", truncation=True, return_tensors="pt"
@@ -561,9 +591,10 @@ if __name__=='__main__':
     parser.add_argument("--n_test",type=int,default=5)
     parser.add_argument("--dest_dataset",type=str,default="jlbaker361/test-scale-images")
     parser.add_argument("--prediction_type",type=str,help=f" one of {VELOCITY}, {EPSILON} or {SAMPLE}",default=EPSILON)
-    parser.add_argument("--src_dataset",type=str,default=AFHQ,help=f"one of {SUN397}, {AFHQ} or {MINI_IMAGE}")
+    parser.add_argument("--src_dataset",type=str,default=AFHQ,help=f"one of {SUN397}, {AFHQ}, {FFHQ}, {C10}, {C100} or {MINI_IMAGE}")
     parser.add_argument("--none_save",action="store_true",help="disable saving (for debugging)")
     parser.add_argument("--no_upload",action="store_true",help="dont upload anything (for debugging)")
+    parser.add_argument("--no_latent",action="store_true",help="disable latent (only do this with cifar data)")
     args=parse_args(parser)
     print(args)
     main(args)

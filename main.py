@@ -334,9 +334,9 @@ def main(args):
         dtype=[p for p in unet.conv_in.parameters()][0].dtype
         unet.conv_in=torch.nn.Conv2d(3,channels,kernel_size=kernel_size,stride=stride,
                                      padding=padding,
-                                     dtype=dtype,device=unet.conv_in.device)
+                                     dtype=dtype,device=device)
         unet.conv_out=torch.nn.Conv2d(channels,3,kernel_size=kernel_size,stride=stride,padding=padding,
-                                      dtype=dtype,device=unet.conv_in.device)
+                                      dtype=dtype,device=device)
         
     
     #save,load=save_and_load_functions(model_dict,save_subdir,api,args.repo_id)

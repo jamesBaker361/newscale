@@ -54,6 +54,7 @@ class FFHQDataset(MaskDataset):
                         if img_path in new_lite_json[key]:
                             self.img_list.append(os.path.join(subdir_path,img))
                             self.cat_list.append("face")
+        self.cat_set=set(self.cat_list)
         
         
     def __getitem__(self, index):

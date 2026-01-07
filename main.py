@@ -530,10 +530,11 @@ def main(args):
                 '''for name,metric in zip(['ssim_metric','psnr_metric','lpips_metric','fid_metric'],[ssim_metric,psnr_metric,lpips_metric,fid_metric]):
                     print(name,metric.device)'''
                 
-                print('gen_inpaint.max(),gen_inpaint.min()',gen_inpaint.max(),gen_inpaint.min())
-                print('images.max(),images.min()',images.max(),images.min())
+                print('gen_inpaint.max(),gen_inpaint.min()',gen_inpaint.max(),gen_inpaint.min(),gen_inpaint.size())
+                print('images.max(),images.min()',images.max(),images.min(),images.size())
                 ssim_score=ssim_metric(super_res,images,) #ssim(preds, target)
                 psnr_score=psnr_metric(super_res,images)
+                print()
                 lpips_score_in=lpips_metric(gen_inpaint,images)
                 lpips_score_out=lpips_metric(gen_outpaint,images)
                 fid_metric_in.update(normalize(images),True)

@@ -7,7 +7,7 @@ from datasets import load_dataset
 import datasets
 import torchvision
 import json
-
+from collections import defaultdict
 
 
 
@@ -103,36 +103,44 @@ class MiniImageNet(MaskDataset):
         
         
 class SUNDataset(MaskDataset):
-    def __init__(self,split:str="train",dim:int=256,limit_per_class:int=150):
+    def __init__(self, split="train", dim=256, limit_per_class=150):
         super().__init__()
-        self.dim=dim
-        data = load_dataset('tanganke/sun397',split=split)
-        data=data.cast_column("image",datasets.Image())
-        class_index_path="sun397_class_index.json"
-        class_mapping=json.load(open(class_index_path,"r"))
-        self.label_count={}
-        for row in data:
-            label=class_mapping[str(row["label"])]
-            if label not in self.label_count:
-                self.label_count[label]=0
-            if self.label_count!=limit_per_class:
-                self.img_list.append(row["image"])
-                
-                self.cat_list.append(class_mapping[str(row["label"])])
-                self.label_count[label]+=1
-            
-        
-        
-        self.cat_set=set(self.cat_list)
-        
-        
-    def __getitem__(self, index):
+        self.dim = dim
+
+        self.data = load_dataset("tanganke/sun397", split=split)
+        self.data = self.data.cast_column("image", datasets.Image())
+
+        class_mapping = json.load(open("sun397_class_index.json"))
+
+        self.indices = []
+        self.cat_list = []
+        self.label_count = defaultdict(int)
+
+        for i, row in enumerate(self.data):
+            label = class_mapping[str(row["label"])]
+
+            if self.label_count[label] >= limit_per_class:
+                continue
+
+            self.indices.append(i)
+            self.cat_list.append(label)
+            self.label_count[label] += 1
+
+        self.cat_set = set(self.cat_list)
+
+    def __getitem__(self, idx):
+        row = self.data[self.indices[idx]]
+        image = row["image"].resize((self.dim, self.dim))
+
         return {
-            "image":self.image_processor.preprocess([self.img_list[index].resize((self.dim,self.dim))])[0],
-            "caption":self.cat_list[index],
-            "mask":self.get_mask(),
-            #"mask_out":Image.open(self.mask_list[random.randint(0,len(self.mask_list-1))]).convert("L").resize((self.dim,self.dim))
+            "image": self.image_processor.preprocess([image])[0],
+            "caption": self.cat_list[idx],
+            "mask": self.get_mask(),
         }
+
+    def __len__(self):
+        return len(self.indices)
+
         
 
 class AFHQDataset(MaskDataset):

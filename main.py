@@ -378,13 +378,13 @@ def main(args):
     
     mask_super_res=Image.open(os.path.join("data","datasets","gt_keep_masks","nn2","000000.png")).convert("L")
     if args.no_latent:
-        mask_super_res_pt=T.ToTensor()(mask_super_res)
+        mask_super_res_pt=T.ToTensor()(mask_super_res.resize((args.dim,args.dim)))
     else:
         mask_super_res_pt=T.ToTensor()(mask_super_res.resize((args.dim//8,args.dim//8)))
     mask_outpaint=Image.open(os.path.join("data","datasets","gt_keep_masks","ex64","000000.png")).convert("L")
     
     if args.no_latent:
-        mask_outpaint_pt=T.ToTensor()(mask_outpaint)
+        mask_outpaint_pt=T.ToTensor()(mask_outpaint.resize((args.dim,args.dim)))
     else:
         mask_outpaint_pt=T.ToTensor()(mask_outpaint.resize((args.dim//8,args.dim//8)))
     
@@ -413,6 +413,7 @@ def main(args):
     def batch_function(batch,training,misc_dict):
         loss=0.0
         images=batch["image"]
+        print("images min max",images.min(),images.max())
         captions=batch["caption"]
         
         bsz=len(images)
@@ -460,7 +461,7 @@ def main(args):
                 if args.no_latent:
                     input_latents=torch.stack(scaled_images).to(device)
                 else:
-                    input_latents=vae.encode(torch.stack(scaled_images).to(device)).latent_dist.sample()
+                    input_latents=vae.encode(torch.stack(scaled_images).to(device)).latent_dist.sample()*vae.config.scaling_factor
                 #print('bsz',bsz,'input_latents.size()',input_latents.size(),'torch.stack(scaled_images)',torch.stack(scaled_images).size(),'real latensts' ,real_latents.size())
                 noise=input_latents -real_latents #the "noise"
             if args.prediction_type==EPSILON:

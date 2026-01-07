@@ -52,6 +52,8 @@ FFHQ="ffhq"
 C10="cifar10"
 C100="cifar100"
 
+DATASET_LIST=[MINI_IMAGE,SUN397,AFHQ,FFHQ,C10,C100]
+
 def inference(unet:UNet2DConditionModel,
               text_encoder:CLIPTextModel,
               tokenizer:CLIPTokenizer,
@@ -184,7 +186,7 @@ def main(args):
         test_dataset=CIFAR100Dataset(split="test",dim=args.dim)
         train_dataset,val_dataset=random_split(train_dataset,[0.9,0.1])
     else:
-        print("Unknown dataset ",args.src_dataset)
+        print("Unknown dataset ",args.src_dataset, "not in ",DATASET_LIST)
         
     print("train len",len(train_dataset))
     print("val",len(val_dataset))
@@ -591,7 +593,7 @@ if __name__=='__main__':
     parser.add_argument("--n_test",type=int,default=5)
     parser.add_argument("--dest_dataset",type=str,default="jlbaker361/test-scale-images")
     parser.add_argument("--prediction_type",type=str,help=f" one of {VELOCITY}, {EPSILON} or {SAMPLE}",default=EPSILON)
-    parser.add_argument("--src_dataset",type=str,default=AFHQ,help=f"one of {SUN397}, {AFHQ}, {FFHQ}, {C10}, {C100} or {MINI_IMAGE}")
+    parser.add_argument("--src_dataset",type=str,default=AFHQ,help=f"one of "+", ".join(DATASET_LIST))
     parser.add_argument("--none_save",action="store_true",help="disable saving (for debugging)")
     parser.add_argument("--no_upload",action="store_true",help="dont upload anything (for debugging)")
     parser.add_argument("--no_latent",action="store_true",help="disable latent (only do this with cifar data)")

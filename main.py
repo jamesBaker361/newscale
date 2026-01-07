@@ -329,8 +329,11 @@ def main(args):
         stride=unet.conv_in.stride
         padding=unet.conv_in.padding
         
-        unet.conv_in=torch.nn.Conv2d(3,channels,kernel_size=kernel_size,stride=stride,padding=padding)
-        unet.conv_out=torch.nn.Conv2d(channels,3,kernel_size=kernel_size,stride=stride,padding=padding)
+        unet.conv_in=torch.nn.Conv2d(3,channels,kernel_size=kernel_size,stride=stride,
+                                     padding=padding,
+                                     dtype=unet.conv_in.dtype,device=unet.conv_in.device)
+        unet.conv_out=torch.nn.Conv2d(channels,3,kernel_size=kernel_size,stride=stride,padding=padding,
+                                      dtype=unet.conv_in.dtype,device=unet.conv_in.device)
         
     
     #save,load=save_and_load_functions(model_dict,save_subdir,api,args.repo_id)

@@ -480,8 +480,8 @@ def main(args):
     batch_function()
     accelerator.free_memory()
     
-    test_metric_dict["fid_in"].append(fid_metric_in.compute())
-    test_metric_dict["fid_out"].append(fid_metric_out.compute())
+    test_metric_dict["fid_in"].append(fid_metric_in.compute().cpu().detach().numpy())
+    test_metric_dict["fid_out"].append(fid_metric_out.compute().cpu().detach().numpy())
     
     fid_metric=FrechetInceptionDistance(feature=64,normalize=False).to(device) #expects images in [0,255]
     inception_metric=InceptionScore(normalize=False).to(device) #expects images in [0,255]

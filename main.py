@@ -439,9 +439,13 @@ def main(args):
                     f"{misc_dict['mode']}_{k+count}":wandb.Image(concat_images_horizontally([inp,outp,super,real]))
                 })
             if misc_dict["mode"]=="test":
+                text_encoder.cpu()
+                unet.cpu()
+                vae.cpu()
                 images=images.to(device)
                 '''for name,metric in zip(['ssim_metric','psnr_metric','lpips_metric','fid_metric'],[ssim_metric,psnr_metric,lpips_metric,fid_metric]):
                     print(name,metric.device)'''
+                
                 ssim_score=ssim_metric(super_res,images,) #ssim(preds, target)
                 psnr_score=psnr_metric(super_res,images)
                 lpips_score_in=lpips_metric(gen_inpaint,images)
@@ -455,6 +459,10 @@ def main(args):
                 for key,score in zip(["ssim","psnr","lpips_in","lpips_out","fid_in","fid_out"],
                                      [ssim_score,psnr_score,lpips_score_in,lpips_score_out,fid_score_in,fid_score_out]):
                     test_metric_dict[key].append(score.cpu().detach().numpy())
+                    
+                text_encoder.to(device)
+                unet.to(device)
+                vae.to(device)
         return loss            
     batch_function()
     accelerator.free_memory()

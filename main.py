@@ -131,9 +131,10 @@ def inference(unet:UNet2DConditionModel,
             progress_bar.update()
     image = image_processor.postprocess(image,output_type=output_type)
     if no_latents:
-        return image
-    image = vae.decode(latents / vae.config.scaling_factor, return_dict=False, )[0]
-    
+        image=latents
+    else:
+        image = vae.decode(latents / vae.config.scaling_factor, return_dict=False, )[0]
+    image = image_processor.postprocess(image,output_type=output_type)
     return image
         
         

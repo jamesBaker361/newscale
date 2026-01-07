@@ -539,7 +539,7 @@ def main(args):
                 captions=[random.choice([cap for cap in test_dataset.cat_set]) for _ in range(args.batch_size)]
             images=inference(unet,text_encoder,tokenizer,vae,
                              image_processor,scheduler,args.num_inference_steps,args,
-                             captions,device,args.batch_size,dims,"pt",None,None,,args.no_latent
+                             captions,device,args.batch_size,dims,"pt",None,None,args.no_latent
                              )
             fid_metric.update(normalize(images),False)
             inception_metric.update(normalize(images))

@@ -97,9 +97,9 @@ def inference(unet:UNet2DConditionModel,
         if latents is None:
             if no_latents:
                 latents=torch.randn((bsz,3,args.dim,args.dim),device=device)
-                (b,_,h,w)=latents.size()
+                '''(b,_,h,w)=latents.size()
                 zero_padding=torch.zeros((b,1,h,w))
-                latents=torch.cat([latents,zero_padding],axis=1)
+                latents=torch.cat([latents,zero_padding],axis=1)'''
             else:
                 latents=torch.randn((bsz,4,args.dim//8,args.dim//8),device=device)
 
@@ -110,9 +110,9 @@ def inference(unet:UNet2DConditionModel,
         if latents is None:
             if no_latents:
                 latents=image_processor.preprocess(img).to(device)
-                (b,_,h,w)=latents.size()
+                '''(b,_,h,w)=latents.size()
                 zero_padding=torch.zeros((b,1,h,w))
-                latents=torch.cat([latents,zero_padding],axis=1)
+                latents=torch.cat([latents,zero_padding],axis=1)'''
                 
             else:
                 latents=vae.encode(image_processor.preprocess(img).to(device)).latent_dist.sample()*vae.config.scaling_factor
@@ -323,7 +323,14 @@ def main(args):
     print("len params",len(params))
     optimizer=torch.optim.AdamW(params,args.lr)
             
-            
+    if args.no_latent:
+        channels=unet.conv_in.out_channels
+        kernel_size=unet.conv_in.kernel_size     
+        stride=unet.conv_in.stride
+        padding=unet.conv_in.padding
+        
+        unet.conv_in=torch.nn.Conv2D(3,channels,kernel_size=kernel_size,stride=stride,padding=padding)
+        unet.conv_out=torch.nn.Conv2D(channels,3,kernel_size=kernel_size,stride=stride,padding=padding)
         
     
     #save,load=save_and_load_functions(model_dict,save_subdir,api,args.repo_id)
@@ -407,9 +414,9 @@ def main(args):
         if misc_dict["mode"] in ["train","val"]:
             if args.no_latent:
                 real_latents=images.to(device)
-                (b,_,h,w)=real_latents.size()
+                '''(b,_,h,w)=real_latents.size()
                 zero_padding=torch.zeros((b,1,h,w))
-                real_latents=torch.cat([real_latents,zero_padding],axis=1)
+                real_latents=torch.cat([real_latents,zero_padding],axis=1)'''
             else:
                 real_latents=vae.encode(images.to(device)).latent_dist.sample()
                 real_latents*=vae.config.scaling_factor

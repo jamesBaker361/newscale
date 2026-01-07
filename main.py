@@ -151,7 +151,7 @@ def main(args):
     elif args.src_dataset.lower()==MINI_IMAGE:
         train_dataset=MiniImageNet(split="train",dim=args.dim)
         test_dataset=MiniImageNet(split="test",dim=args.dim)
-        val_dataset=MiniImageNet(split="val",dim=args.dim)
+        val_dataset=MiniImageNet(split="validation",dim=args.dim)
     elif args.src_dataset.lower()==SUN397:
         train_dataset=SUNDataset(split="train",dim=args.dim)
         test_dataset=SUNDataset(split="test",dim=args.dim)

@@ -91,7 +91,7 @@ class CIFAR100Dataset(MaskDataset):
         self.label_count = defaultdict(int)
 
         for i, row in enumerate(self.data):
-            label = row["label"]
+            label = row["fine_label"]
 
             if limit_per_class>0 and self.label_count[label] >= limit_per_class:
                 continue

@@ -98,7 +98,6 @@ class MiniImageNet(MaskDataset):
 
         img = row["image"]
 
-        # ✅ force RGB (handles grayscale safely)
         if img.mode != "RGB":
             img = img.convert("RGB")
 
@@ -143,6 +142,8 @@ class SUNDataset(MaskDataset):
     def __getitem__(self, idx):
         row = self.data[self.indices[idx]]
         image = row["image"].resize((self.dim, self.dim))
+        if image.mode != "RGB":
+            image = image.convert("RGB")
 
         return {
             "image": self.image_processor.preprocess([image])[0],

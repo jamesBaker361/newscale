@@ -383,6 +383,7 @@ def main(args):
         mask_outpaint_pt=T.ToTensor()(mask_outpaint.resize((args.dim//8,args.dim//8)))
     
     mask_inpaint_pt=(1.-mask_outpaint_pt)
+    print("mask ",mask_inpaint_pt.max(),mask_inpaint_pt.min())
     
     def normalize(images:torch.Tensor)->torch.Tensor:
         #[-1,1] to [0,255]

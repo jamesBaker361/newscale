@@ -11,7 +11,7 @@ from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion import retri
 from diffusers.models.attention_processor import  IPAdapterAttnProcessor, IPAdapterAttnProcessor2_0, IPAdapterXFormersAttnProcessor,Attention
 from transformers import CLIPTokenizer,CLIPTextModel
 import time
-from data_helpers import AFHQDataset,SUNDataset,MiniImageNet
+from data_helpers import AFHQDataset,SUNDataset,MiniImageNet,FFHQDataset
 import torch
 from torch.utils.data import Dataset, DataLoader,random_split
 import torch.nn.functional as F
@@ -48,6 +48,7 @@ SAMPLE="sample"
 MINI_IMAGE="miniimagenet"
 SUN397="sun"
 AFHQ="afhq"
+FFHQ="ffhq"
 
 def inference(unet:UNet2DConditionModel,
               text_encoder:CLIPTextModel,
@@ -155,8 +156,16 @@ def main(args):
         train_dataset=SUNDataset(split="train",dim=args.dim)
         test_dataset=SUNDataset(split="test",dim=args.dim)
         train_dataset,val_dataset=random_split(train_dataset,[0.9,0.1])
+    elif args.src_dataset.lower()==FFHQ:
+        train_dataset=FFHQDataset(split="train",dim=args.dim)
+        train_dataset,val_dataset=random_split(train_dataset,[0.9,0.1])
+        test_dataset=FFHQDataset(split="test",dim=args.dim)
     else:
         print("Unknown dataset ",args.src_dataset)
+        
+    print("train len",len(train_dataset))
+    print("val",len(val_dataset))
+    print("test ",len(test_dataset))
         
         
     train_loader=DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)

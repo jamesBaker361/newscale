@@ -22,7 +22,7 @@
 
 #SBATCH --nodelist=g20-[01-13]
 
-#SBATCH --constraint='RTX_8000|L40S|RTX_6000|A100'
+#SBATCH --constraint='RTX_8000|L40S|RTX_6000|H100'
 
 
 day=$(date +'%m/%d/%Y %R')

@@ -65,42 +65,53 @@ class FFHQDataset(MaskDataset):
             #"mask_out":Image.open(self.mask_list[random.randint(0,len(self.mask_list-1))]).convert("L").resize((self.dim,self.dim))
         }
 
+
 class MiniImageNet(MaskDataset):
-    def __init__(self,split:str="train",dim:int=256,limit_per_class:int=-1):
+    def __init__(self, split="train", dim=256, limit_per_class=-1):
         super().__init__()
-        self.dim=dim
-        data=load_dataset("timm/mini-imagenet",split=split)
-        data=data.cast_column("image",datasets.Image())
-        
+        self.dim = dim
 
-        class_index_path="imagenet_class_index.json"
-        class_index=json.load(open(class_index_path,"r"))
-        class_mapping={}
-        for key,pair in class_index.items():
-            class_mapping[key]=pair[1]
-        self.label_count={}
-        for row in data:
-            label=class_mapping[str(row["label"])]
-            if label not in self.label_count:
-                self.label_count[label]=0
-            if self.label_count!=limit_per_class:
-                self.img_list.append(row["image"])
-                
-                self.cat_list.append(class_mapping[str(row["label"])])
-                self.label_count[label]+=1
-            
-        
-            
-        self.cat_set=set(self.cat_list)
+        self.data = load_dataset("timm/mini-imagenet", split=split)
+        self.data = self.data.cast_column("image", datasets.Image())
 
-    
-    def __getitem__(self, index):
+        class_index = json.load(open("imagenet_class_index.json"))
+        class_mapping = {k: v[1] for k, v in class_index.items()}
+
+        self.indices = []
+        self.cat_list = []
+        self.label_count = defaultdict(int)
+
+        for i, row in enumerate(self.data):
+            label = class_mapping[str(row["label"])]
+
+            if limit_per_class > 0 and self.label_count[label] >= limit_per_class:
+                continue
+
+            self.indices.append(i)
+            self.cat_list.append(label)
+            self.label_count[label] += 1
+
+        self.cat_set = set(self.cat_list)
+
+    def __getitem__(self, idx):
+        row = self.data[self.indices[idx]]
+
+        img = row["image"]
+
+        # ✅ force RGB (handles grayscale safely)
+        if img.mode != "RGB":
+            img = img.convert("RGB")
+
+        img = img.resize((self.dim, self.dim), Image.BILINEAR)
+
         return {
-            "image":self.image_processor.preprocess([self.img_list[index].resize((self.dim,self.dim))])[0],
-            "caption":self.cat_list[index],
-            "mask":self.get_mask(),
-            #"mask_out":Image.open(self.mask_list[random.randint(0,len(self.mask_list-1))]).convert("L").resize((self.dim,self.dim))
+            "image": self.image_processor.preprocess([img])[0],
+            "caption": self.cat_list[idx],
+            "mask": self.get_mask(),
         }
+
+    def __len__(self):
+        return len(self.indices)
         
         
 class SUNDataset(MaskDataset):

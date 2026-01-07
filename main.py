@@ -453,6 +453,8 @@ def main(args):
                 fid_metric.update(normalize(images),True)
                 fid_metric.update(normalize(gen_inpaint),False)
                 fid_score_in=fid_metric.compute()
+                fid_metric.reset()
+                fid_metric.update(normalize(images),True)
                 fid_metric.update(normalize(gen_outpaint),False)
                 fid_score_out=fid_metric.compute()
                 
@@ -476,36 +478,42 @@ def main(args):
             "image":[],
             "caption":[]
         }
-        real_images=torch.cat([batch["image"] for batch in test_loader ])
-        gen_images=[]
+        print("fid ",fid_metric.device)
+        print("icpetion",inception_metric.device)
+        #real_images=torch.cat([batch["image"] for batch in test_loader ])
+        for batch in test_loader:
+            real_images=batch["image"]
+            fid_metric.update(normalize(real_images.to(device)),True)
+        #gen_images=[]
         for k in range(args.n_test):
             captions=random.sample([cap for cap in test_dataset.cat_set],args.batch_size)
             images=inference(unet,text_encoder,tokenizer,vae,
                              image_processor,scheduler,args.num_inference_steps,args,
                              captions,device,args.batch_size,dims,"pt",None,None
                              )
-            gen_images.append(images.cpu())
+            fid_metric.update(normalize(images),False)
+            inception_metric.update(normalize(images))
             images_pil=image_processor.postprocess(images)
             for cap,img in zip(captions,images_pil):
                 output_dict["image"].append(img)
                 output_dict["caption"].append(cap)
             accelerator.free_memory()
-        gen_images=torch.cat(gen_images)
+        #gen_images=torch.cat(gen_images)
         if args.no_upload is False:
             Dataset.from_dict(output_dict).push_to_hub(args.dest_dataset)
             
         text_encoder.cpu()
         unet.cpu()
         vae.cpu()
-        gen_images.to(device)
+        #gen_images.to(device)
         print("fid ",fid_metric.device)
         print("icpetion",inception_metric.device)
-        print("gen,real",gen_images.device,real_images.device)
-        fid_metric.update(normalize(real_images.to(device)),True)
-        fid_metric.update(normalize(gen_images),False)
+        #print("gen,real",gen_images.device,real_images.device)
+        #fid_metric.update(normalize(real_images.to(device)),True)
+        #fid_metric.update(normalize(gen_images),False)
         test_metric_dict["fid_gen"].append(fid_metric.compute().cpu().detach().numpy())
         
-        inception_metric.update(normalize(gen_images))
+        #inception_metric.update(normalize(gen_images))
         test_metric_dict["incept"].append(inception_metric.compute()[0].cpu().detach().numpy())
         
         test_metric_dict={

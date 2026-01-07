@@ -36,6 +36,7 @@ class MaskDataset(Dataset):
 class FFHQDataset(MaskDataset):
     def __init__(self,dim:int=256,split:str="train"):
         super().__init__()
+        self.dim=dim
         with open("ffhq_lite.json","r") as file:
             lite_json=json.load(file) #{'training', 'validation'}
         new_lite_json={

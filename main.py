@@ -484,7 +484,7 @@ def main(args):
                              image_processor,scheduler,args.num_inference_steps,args,
                              captions,device,args.batch_size,dims,"pt",None,None
                              )
-            gen_images.append(images)
+            gen_images.append(images.cpu())
             images_pil=image_processor.postprocess(images)
             for cap,img in zip(captions,images_pil):
                 output_dict["image"].append(img)
@@ -494,6 +494,10 @@ def main(args):
         if args.no_upload is False:
             Dataset.from_dict(output_dict).push_to_hub(args.dest_dataset)
             
+        text_encoder.cpu()
+        unet.cpu()
+        vae.cpu()
+        gen_images.to(device)
         print("fid ",fid_metric.device)
         print("icpetion",inception_metric.device)
         print("gen,real",gen_images.device,real_images.device)

@@ -329,8 +329,8 @@ def main(args):
         stride=unet.conv_in.stride
         padding=unet.conv_in.padding
         
-        unet.conv_in=torch.nn.Conv2D(3,channels,kernel_size=kernel_size,stride=stride,padding=padding)
-        unet.conv_out=torch.nn.Conv2D(channels,3,kernel_size=kernel_size,stride=stride,padding=padding)
+        unet.conv_in=torch.nn.Conv2d(3,channels,kernel_size=kernel_size,stride=stride,padding=padding)
+        unet.conv_out=torch.nn.Conv2d(channels,3,kernel_size=kernel_size,stride=stride,padding=padding)
         
     
     #save,load=save_and_load_functions(model_dict,save_subdir,api,args.repo_id)
@@ -502,6 +502,8 @@ def main(args):
             batch_num=misc_dict["b"]
             count=args.batch_size*batch_num
             
+
+            
             gen_inpaint_pil=image_processor.postprocess(gen_inpaint)
             gen_outpaint_pil=image_processor.postprocess(gen_outpaint)
             super_res_pil=image_processor.postprocess(super_res)
@@ -520,6 +522,8 @@ def main(args):
                 '''for name,metric in zip(['ssim_metric','psnr_metric','lpips_metric','fid_metric'],[ssim_metric,psnr_metric,lpips_metric,fid_metric]):
                     print(name,metric.device)'''
                 
+                print('gen_inpaint.max(),gen_inpaint.min()',gen_inpaint.max(),gen_inpaint.min())
+                print('images.max(),images.min()',images.max(),images.min())
                 ssim_score=ssim_metric(super_res,images,) #ssim(preds, target)
                 psnr_score=psnr_metric(super_res,images)
                 lpips_score_in=lpips_metric(gen_inpaint,images)

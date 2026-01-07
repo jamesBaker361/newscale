@@ -176,9 +176,13 @@ if __name__=="__main__":
     base_dir="images1024x1024"
     for subdir in os.listdir(base_dir):
         if os.path.isdir(subdir):
+            print("subdir!")
             subdir_path=os.path.join(base_dir,subdir)
             for img in os.listdir(subdir_path):
+                print("n images ",len(os.listdir(subdir_path)))
+                img_path=os.path.join(subdir_path,img)
                 if img.endswith("png"):
-                    img_path=os.path.join(subdir_path,img)
+                    
                     print(img_path)
-    
+                else:
+                    print("doesnt end with",img_path)

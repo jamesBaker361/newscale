@@ -454,17 +454,17 @@ def main(args):
             gen_inpaint=inference(unet,text_encoder,
                                   tokenizer,vae,
                                   image_processor,scheduler,args.num_inference_steps,args,
-                                  captions,device,bsz,dims, "pt",mask_inpaint_pt,images,)
+                                  captions,device,bsz,dims, "pt",mask_inpaint_pt,images,args.no_latent)
             
             gen_outpaint=inference(unet,text_encoder,
                                   tokenizer,vae,
                                   image_processor,scheduler,args.num_inference_steps,args,
-                                  captions,device,bsz,dims, "pt",mask_outpaint_pt,images)
+                                  captions,device,bsz,dims, "pt",mask_outpaint_pt,images,args.no_latent)
             
             super_res=inference(unet,text_encoder,
                                   tokenizer,vae,
                                   image_processor,scheduler,args.num_inference_steps,args,
-                                  captions,device,bsz,dims, "pt",mask_super_res_pt, images)
+                                  captions,device,bsz,dims, "pt",mask_super_res_pt, images,args.no_latent)
             
             accelerator.free_memory()
             
@@ -539,7 +539,7 @@ def main(args):
                 captions=[random.choice([cap for cap in test_dataset.cat_set]) for _ in range(args.batch_size)]
             images=inference(unet,text_encoder,tokenizer,vae,
                              image_processor,scheduler,args.num_inference_steps,args,
-                             captions,device,args.batch_size,dims,"pt",None,None
+                             captions,device,args.batch_size,dims,"pt",None,None,,args.no_latent
                              )
             fid_metric.update(normalize(images),False)
             inception_metric.update(normalize(images))

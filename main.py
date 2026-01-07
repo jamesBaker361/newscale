@@ -372,13 +372,13 @@ def main(args):
     
     mask_super_res=Image.open(os.path.join("data","datasets","gt_keep_masks","nn2","000000.png")).convert("L")
     if args.no_latent:
-        mask_super_res_pt=T.ToTensor()
+        mask_super_res_pt=T.ToTensor()(mask_super_res)
     else:
         mask_super_res_pt=T.ToTensor()(mask_super_res.resize((args.dim//8,args.dim//8)))
     mask_outpaint=Image.open(os.path.join("data","datasets","gt_keep_masks","ex64","000000.png")).convert("L")
     
     if args.no_latent:
-        mask_outpaint_pt=T.ToTensor()
+        mask_outpaint_pt=T.ToTensor()(mask_outpaint)
     else:
         mask_outpaint_pt=T.ToTensor()(mask_outpaint.resize((args.dim//8,args.dim//8)))
     

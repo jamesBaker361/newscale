@@ -501,7 +501,10 @@ def main(args):
             fid_metric.update(normalize(real_images.to(device)),True)
         #gen_images=[]
         for k in range(args.n_test):
-            captions=random.sample([cap for cap in test_dataset.cat_set],args.batch_size)
+            try:
+                captions=random.sample([cap for cap in test_dataset.cat_set],args.batch_size)
+            except ValueError:
+                captions=[random.choice([cap for cap in test_dataset.cat_set]) for _ in range(args.batch_size)]
             images=inference(unet,text_encoder,tokenizer,vae,
                              image_processor,scheduler,args.num_inference_steps,args,
                              captions,device,args.batch_size,dims,"pt",None,None

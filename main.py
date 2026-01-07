@@ -301,8 +301,7 @@ def main(args):
     ssim_metric=StructuralSimilarityIndexMeasure(data_range=(-1.0,1.0)).to(device)
     psnr_metric=PeakSignalNoiseRatio(data_range=(-1.0,1.0)).to(device)
     lpips_metric=LearnedPerceptualImagePatchSimilarity(net_type='squeeze').to(device)
-    fid_metric=FrechetInceptionDistance(feature=64,normalize=False).to(device) #expects images in [0,255]
-    inception_metric=InceptionScore(normalize=False).to(device) #expects images in [0,255]
+    
     
     dims=[1]
     while dims[-1]!=args.dim:
@@ -328,6 +327,9 @@ def main(args):
         _images=_images.to(torch.uint8)
         
         return _images
+    
+    fid_metric_out=FrechetInceptionDistance(feature=64,normalize=False).to(device) #expects images in [0,255]
+    fid_metric_in=FrechetInceptionDistance(feature=64,normalize=False).to(device) #expects images in [0,255]
     
     if args.none_save:
         print("SAVING IS DISABLED- only do this if debugging!!!")
@@ -450,16 +452,16 @@ def main(args):
                 psnr_score=psnr_metric(super_res,images)
                 lpips_score_in=lpips_metric(gen_inpaint,images)
                 lpips_score_out=lpips_metric(gen_outpaint,images)
-                fid_metric.update(normalize(images),True)
-                fid_metric.update(normalize(gen_inpaint),False)
-                fid_score_in=fid_metric.compute()
-                fid_metric.reset()
-                fid_metric.update(normalize(images),True)
-                fid_metric.update(normalize(gen_outpaint),False)
-                fid_score_out=fid_metric.compute()
+                fid_metric_in.update(normalize(images),True)
+                fid_metric_in.update(normalize(gen_inpaint),False)
+                #fid_score_in=fid_metric.compute()
+                #fid_metric.reset()
+                fid_metric_out.update(normalize(images),True)
+                fid_metric_out.update(normalize(gen_outpaint),False)
+                #fid_score_out=fid_metric.compute()
                 
-                for key,score in zip(["ssim","psnr","lpips_in","lpips_out","fid_in","fid_out"],
-                                     [ssim_score,psnr_score,lpips_score_in,lpips_score_out,fid_score_in,fid_score_out]):
+                for key,score in zip(["ssim","psnr","lpips_in","lpips_out"], #,"fid_in","fid_out"],
+                                     [ssim_score,psnr_score,lpips_score_in,lpips_score_out]): #,fid_score_in,fid_score_out]):
                     test_metric_dict[key].append(score.cpu().detach().numpy())
                     
                 text_encoder.to(device)
@@ -469,7 +471,11 @@ def main(args):
     batch_function()
     accelerator.free_memory()
     
+    test_metric_dict["fid_in"].append(fid_metric_in.compute())
+    test_metric_dict["fid_out"].append(fid_metric_out.compute())
     
+    fid_metric=FrechetInceptionDistance(feature=64,normalize=False).to(device) #expects images in [0,255]
+    inception_metric=InceptionScore(normalize=False).to(device) #expects images in [0,255]
     
     with torch.no_grad():
         print("generation task beginning")

@@ -104,7 +104,7 @@ class CIFAR100Dataset(MaskDataset):
 
     def __getitem__(self, idx):
         row = self.data[self.indices[idx]]
-        image = row["image"].resize((self.dim, self.dim))
+        image = row["img"].resize((self.dim, self.dim))
         if image.mode != "RGB":
             image = image.convert("RGB")
 

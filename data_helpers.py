@@ -175,6 +175,7 @@ if __name__=="__main__":
         print(k, [_v for _v in v][:10])
     base_dir="images1024x1024"
     for subdir in os.listdir(base_dir):
+        print(subdir)
         if os.path.isdir(subdir):
             print("subdir!")
             subdir_path=os.path.join(base_dir,subdir)

@@ -129,7 +129,6 @@ def inference(unet:UNet2DConditionModel,
             latents = scheduler.step(noise_pred, t, latents, return_dict=False)[0]
             
             progress_bar.update()
-    image = image_processor.postprocess(image,output_type=output_type)
     if no_latents:
         image=latents
     else:

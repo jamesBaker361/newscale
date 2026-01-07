@@ -36,15 +36,17 @@ class MaskDataset(Dataset):
 class FFHQDataset(MaskDataset):
     def __init__(self,dim:int=256,split:str="train"):
         super().__init__()
-        lite_json=json.load(open("ffhq_lite.json","r")) #{'training', 'validation'}
+        with open("ffhq_lite.json","r") as file:
+            lite_json=json.load(file) #{'training', 'validation'}
         new_lite_json={
             k:set(v) for k,v in lite_json.items()
         }
         key={"train":"training","test":"validation"}[split]
         base_dir="images1024x1024"
         for subdir in os.listdir(base_dir):
-            if os.path.isdir(subdir):
-                subdir_path=os.path.join(base_dir,subdir)
+            subdir_path=os.path.join(base_dir,subdir)
+            if os.path.isdir(subdir_path):
+                
                 for img in os.listdir(subdir_path):
                     if img.endswith("png"):
                         img_path=os.path.join(subdir_path,img)
@@ -166,7 +168,7 @@ if __name__=="__main__":
         for batch in data:
             break
         print(split,len(data))
-    lite_json=json.load(open("ffhq_lite.json","r")) #{'training', 'validation'}
+    '''lite_json=json.load(open("ffhq_lite.json","r")) #{'training', 'validation'}
     new_lite_json={
         k:set(v) for k,v in lite_json.items()
     }
@@ -186,4 +188,4 @@ if __name__=="__main__":
                     
                     print(img_path)
                 else:
-                    print("doesnt end with",img_path)
+                    print("doesnt end with",img_path)'''

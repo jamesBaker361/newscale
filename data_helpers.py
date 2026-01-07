@@ -173,12 +173,12 @@ if __name__=="__main__":
     
     for k,v in new_lite_json.items():
         print(k, [_v for _v in v][:10])
-    base_dir="images1024x1024"
+    base_dir="images1024x1024" #images1024x1024
     for subdir in os.listdir(base_dir):
-        print(subdir)
-        if os.path.isdir(subdir):
+        subdir_path=os.path.join(base_dir,subdir)
+        if os.path.isdir(subdir_path):
             print("subdir!")
-            subdir_path=os.path.join(base_dir,subdir)
+            
             for img in os.listdir(subdir_path):
                 print("n images ",len(os.listdir(subdir_path)))
                 img_path=os.path.join(subdir_path,img)

@@ -94,7 +94,7 @@ def inference(unet:UNet2DConditionModel,
         print("latenst b4 mask",latents.size())
         if mask is not None:
             latents=mask.to(device)*latents
-            print("latenst after mask",latents.size())
+            print("latenst after mask",latents.size(),latents.max(),latents.min())
     
     if args.timesteps==CONTINUOUS_NOISE:
         if latents is None:
@@ -126,7 +126,7 @@ def inference(unet:UNet2DConditionModel,
             
         if args.timesteps==DISCRETE_SCALE:
             timesteps=[torch.tensor(t,device=device).long() for t in dims]
-    print("after else if ",latents.size())    
+    print("after else if ",latents.size(),latents.max(),latents.min())    
     with tqdm(total=num_inference_steps) as progress_bar:
         for i,t in enumerate(timesteps):
             # expand the latents if we are doing classifier free guidance
@@ -143,7 +143,7 @@ def inference(unet:UNet2DConditionModel,
             # compute the previous noisy sample x_t -> x_t-1
             
             latents = scheduler.step(noise_pred, t, latents, return_dict=False)[0]
-            print("latents loop",latents.size())
+            print("latents loop",latents.size(),latents.max(),latents.min())
             progress_bar.update()
     if no_latents:
         image=latents

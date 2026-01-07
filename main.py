@@ -86,13 +86,22 @@ def inference(unet:UNet2DConditionModel,
         
     latents=None
     if src_image is not None:
-        latents=vae.encode(src_image.to(device)).latent_dist.sample()*vae.config.scaling_factor
+        if no_latents:
+            latents=src_image.to(device)
+        else:
+            latents=vae.encode(src_image.to(device)).latent_dist.sample()*vae.config.scaling_factor
         if mask is not None:
             latents=mask.to(device)*latents
     
     if args.timesteps==CONTINUOUS_NOISE:
         if latents is None:
-            latents=torch.randn((bsz,4,args.dim//8,args.dim//8),device=device)
+            if no_latents:
+                latents=torch.randn((bsz,3,args.dim,args.dim),device=device)
+                (b,_,h,w)=latents.size()
+                zero_padding=torch.zeros((b,1,h,w))
+                latents=torch.cat([latents,zero_padding],axis=1)
+            else:
+                latents=torch.randn((bsz,4,args.dim//8,args.dim//8),device=device)
 
         timesteps,num_inference_steps=retrieve_timesteps(scheduler,num_inference_steps,device=device)
         
@@ -101,6 +110,10 @@ def inference(unet:UNet2DConditionModel,
         if latents is None:
             if no_latents:
                 latents=image_processor.preprocess(img).to(device)
+                (b,_,h,w)=latents.size()
+                zero_padding=torch.zeros((b,1,h,w))
+                latents=torch.cat([latents,zero_padding],axis=1)
+                
             else:
                 latents=vae.encode(image_processor.preprocess(img).to(device)).latent_dist.sample()*vae.config.scaling_factor
 
@@ -351,10 +364,16 @@ def main(args):
     print("iteration dims",iteration_dims)
     
     mask_super_res=Image.open(os.path.join("data","datasets","gt_keep_masks","nn2","000000.png")).convert("L")
-    mask_super_res_pt=T.ToTensor()(mask_super_res.resize((args.dim//8,args.dim//8)))
+    if args.no_latent:
+        mask_super_res_pt=T.ToTensor()
+    else:
+        mask_super_res_pt=T.ToTensor()(mask_super_res.resize((args.dim//8,args.dim//8)))
     mask_outpaint=Image.open(os.path.join("data","datasets","gt_keep_masks","ex64","000000.png")).convert("L")
     
-    mask_outpaint_pt=T.ToTensor()(mask_outpaint.resize((args.dim//8,args.dim//8)))
+    if args.no_latent:
+        mask_outpaint_pt=T.ToTensor()
+    else:
+        mask_outpaint_pt=T.ToTensor()(mask_outpaint.resize((args.dim//8,args.dim//8)))
     
     mask_inpaint_pt=(1.-mask_outpaint_pt)
     
@@ -388,6 +407,9 @@ def main(args):
         if misc_dict["mode"] in ["train","val"]:
             if args.no_latent:
                 real_latents=images.to(device)
+                (b,_,h,w)=real_latents.size()
+                zero_padding=torch.zeros((b,1,h,w))
+                real_latents=torch.cat([real_latents,zero_padding],axis=1)
             else:
                 real_latents=vae.encode(images.to(device)).latent_dist.sample()
                 real_latents*=vae.config.scaling_factor

@@ -387,7 +387,7 @@ def main(args):
         
         if misc_dict["mode"] in ["train","val"]:
             if args.no_latent:
-                real_latents=images
+                real_latents=images.to(device)
             else:
                 real_latents=vae.encode(images.to(device)).latent_dist.sample()
                 real_latents*=vae.config.scaling_factor

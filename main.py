@@ -483,7 +483,7 @@ def main(args):
                 
             if misc_dict["epochs"]==start_epoch and misc_dict["b"]==0:
                 for name,t in zip(['timesteps','target_latents','images','input_latents'],[timesteps,target_latents,images,input_latents]):
-                    #print(name,t.size(),t.device)
+                    print(name,t.size(),t.device)
                 
             if training:
                 with accelerator.accumulate(params):

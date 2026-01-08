@@ -91,10 +91,10 @@ def inference(unet:UNet2DConditionModel,
             latents=src_image.to(device)
         else:
             latents=vae.encode(src_image.to(device)).latent_dist.sample()*vae.config.scaling_factor
-        print("latenst b4 mask",latents.size())
+        #print("latenst b4 mask",latents.size())
         if mask is not None:
             latents=mask.to(device)*latents
-            print("latenst after mask",latents.size(),latents.max(),latents.min())
+            #print("latenst after mask",latents.size(),latents.max(),latents.min())
     
     if args.timesteps==CONTINUOUS_NOISE:
         if latents is None:
@@ -126,7 +126,7 @@ def inference(unet:UNet2DConditionModel,
             
         if args.timesteps==DISCRETE_SCALE:
             timesteps=[torch.tensor(t,device=device).long() for t in dims]
-    print("after else if ",latents.size(),latents.max(),latents.min())    
+    #print("after else if ",latents.size(),latents.max(),latents.min())    
     with tqdm(total=num_inference_steps) as progress_bar:
         for i,t in enumerate(timesteps):
             # expand the latents if we are doing classifier free guidance
@@ -143,7 +143,7 @@ def inference(unet:UNet2DConditionModel,
             # compute the previous noisy sample x_t -> x_t-1
             
             latents = scheduler.step(noise_pred, t, latents, return_dict=False)[0]
-            print("latents loop",latents.size(),latents.max(),latents.min())
+            #print("latents loop",latents.size(),latents.max(),latents.min())
             progress_bar.update()
     if no_latents:
         image=latents
@@ -413,7 +413,7 @@ def main(args):
     def batch_function(batch,training,misc_dict):
         loss=0.0
         images=batch["image"]
-        print("images min max",images.min(),images.max())
+        #print("images min max",images.min(),images.max())
         captions=batch["caption"]
         
         bsz=len(images)
@@ -473,7 +473,7 @@ def main(args):
                 
             if misc_dict["epochs"]==start_epoch and misc_dict["b"]==0:
                 for name,t in zip(['timesteps','target_latents','images','input_latents'],[timesteps,target_latents,images,input_latents]):
-                    print(name,t.size(),t.device)
+                    #print(name,t.size(),t.device)
                 
             if training:
                 with accelerator.accumulate(params):
@@ -530,11 +530,11 @@ def main(args):
                 '''for name,metric in zip(['ssim_metric','psnr_metric','lpips_metric','fid_metric'],[ssim_metric,psnr_metric,lpips_metric,fid_metric]):
                     print(name,metric.device)'''
                 
-                print('gen_inpaint.max(),gen_inpaint.min()',gen_inpaint.max(),gen_inpaint.min(),gen_inpaint.size())
-                print('images.max(),images.min()',images.max(),images.min(),images.size())
+                #print('gen_inpaint.max(),gen_inpaint.min()',gen_inpaint.max(),gen_inpaint.min(),gen_inpaint.size())
+                #print('images.max(),images.min()',images.max(),images.min(),images.size())
                 ssim_score=ssim_metric(super_res,images,) #ssim(preds, target)
                 psnr_score=psnr_metric(super_res,images)
-                print()
+                #print()
                 lpips_score_in=lpips_metric(gen_inpaint,images)
                 lpips_score_out=lpips_metric(gen_outpaint,images)
                 fid_metric_in.update(normalize(images),True)

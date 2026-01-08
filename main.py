@@ -82,6 +82,13 @@ def inference(unet:UNet2DConditionModel,
                 captions, max_length=tokenizer.model_max_length, padding="max_length", truncation=True, return_tensors="pt"
             ).input_ids.to(device)
     encoder_hidden_states=text_encoder(token_ids, return_dict=False)[0]
+    
+    if args.text_conditional and args.do_classifier_free_guidance:
+        negative_token_ids= tokenizer(
+                [" "]*bsz, max_length=tokenizer.model_max_length, padding="max_length", truncation=True, return_tensors="pt"
+            ).input_ids.to(device)
+        negative_encoder_hidden_states=text_encoder(negative_token_ids, return_dict=False)[0]
+        encoder_hidden_states = torch.cat([negative_encoder_hidden_states,encoder_hidden_states])
 
         
     latents=None
@@ -130,7 +137,7 @@ def inference(unet:UNet2DConditionModel,
     with tqdm(total=num_inference_steps) as progress_bar:
         for i,t in enumerate(timesteps):
             # expand the latents if we are doing classifier free guidance
-            #latent_model_input = torch.cat([latents] * 2) if self.do_classifier_free_guidance else latents
+            latents= torch.cat([latents] * 2) if self.do_classifier_free_guidance else latents
             #latent_model_input = scheduler.scale_model_input(latents, t)
             
             noise_pred = unet(
@@ -141,6 +148,9 @@ def inference(unet:UNet2DConditionModel,
             )[0]
             
             # compute the previous noisy sample x_t -> x_t-1
+            if args.do_classifier_free_guidance:
+                noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
+                noise_pred = noise_pred_uncond + args.guidance_scale * (noise_pred_text - noise_pred_uncond)
             
             latents = scheduler.step(noise_pred, t, latents, return_dict=False)[0]
             #print("latents loop",latents.size(),latents.max(),latents.min())
@@ -641,6 +651,8 @@ if __name__=='__main__':
     parser.add_argument("--none_save",action="store_true",help="disable saving (for debugging)")
     parser.add_argument("--no_upload",action="store_true",help="dont upload anything (for debugging)")
     parser.add_argument("--no_latent",action="store_true",help="disable latent (only do this with cifar data)")
+    parser.add_argument("--do_classifier_free_guidance",action="store_true")
+    parser.add_argument("--guidance_scale",type=float,default=7.5)
     args=parse_args(parser)
     print(args)
     main(args)

@@ -137,7 +137,7 @@ def inference(unet:UNet2DConditionModel,
     with tqdm(total=num_inference_steps) as progress_bar:
         for i,t in enumerate(timesteps):
             # expand the latents if we are doing classifier free guidance
-            latents= torch.cat([latents] * 2) if self.do_classifier_free_guidance else latents
+            latents= torch.cat([latents] * 2) if args.do_classifier_free_guidance else latents
             #latent_model_input = scheduler.scale_model_input(latents, t)
             
             noise_pred = unet(

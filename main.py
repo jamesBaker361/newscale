@@ -134,27 +134,27 @@ def inference(unet:UNet2DConditionModel,
         if args.timesteps==DISCRETE_SCALE:
             timesteps=[torch.tensor(t,device=device).long() for t in dims]
     #print("after else if ",latents.size(),latents.max(),latents.min())    
-    with tqdm(total=num_inference_steps) as progress_bar:
-        for i,t in enumerate(timesteps):
-            # expand the latents if we are doing classifier free guidance
-            latents_input= torch.cat([latents] * 2) if args.do_classifier_free_guidance else latents
-            #latent_model_input = scheduler.scale_model_input(latents, t)
-            
-            noise_pred = unet(
-                    latents_input,
-                    t,
-                encoder_hidden_states=encoder_hidden_states,
-                return_dict=False,
-            )[0]
-            
-            # compute the previous noisy sample x_t -> x_t-1
-            if args.do_classifier_free_guidance:
-                noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
-                noise_pred = noise_pred_uncond + args.guidance_scale * (noise_pred_text - noise_pred_uncond)
-            
-            latents = scheduler.step(noise_pred, t, latents, return_dict=False)[0]
+    #with tqdm(total=num_inference_steps) as progress_bar:
+    for i,t in enumerate(timesteps):
+        # expand the latents if we are doing classifier free guidance
+        latents_input= torch.cat([latents] * 2) if args.do_classifier_free_guidance else latents
+        #latent_model_input = scheduler.scale_model_input(latents, t)
+        
+        noise_pred = unet(
+                latents_input,
+                t,
+            encoder_hidden_states=encoder_hidden_states,
+            return_dict=False,
+        )[0]
+        
+        # compute the previous noisy sample x_t -> x_t-1
+        if args.do_classifier_free_guidance:
+            noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
+            noise_pred = noise_pred_uncond + args.guidance_scale * (noise_pred_text - noise_pred_uncond)
+        
+        latents = scheduler.step(noise_pred, t, latents, return_dict=False)[0]
             #print("latents loop",latents.size(),latents.max(),latents.min())
-            progress_bar.update()
+            #progress_bar.update()
     if no_latents:
         image=latents
     else:

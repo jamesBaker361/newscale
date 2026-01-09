@@ -385,6 +385,18 @@ def main(args):
     iteration_dims=[1]+[int(args.dim*float(j/args.num_inference_iterations)) for j in range(1,1+args.num_inference_iterations)]
     print("dims",dims)
     print("iteration dims",iteration_dims)
+    print("step",scheduler.config.num_train_timesteps/(len(dims)-1))
+    
+    def get_timesteps_scale(scale:int):
+        if scale==1:
+            return 999
+        if scale==args.dim:
+            return 1
+        else:
+            reverse_scale=args.dim-scale
+            step=scheduler.config.num_train_timesteps/args.dim
+            return int(reverse_scale*step)
+            
     
     mask_super_res=Image.open(os.path.join("data","datasets","gt_keep_masks","nn2","000000.png")).convert("L")
     if args.no_latent:
@@ -457,17 +469,20 @@ def main(args):
                 
             else:
                 if args.timesteps==CONTINUOUS_SCALE:
-                    scales=[int((args.dim)*random.random()) for r in range(bsz)]
+                    scales=[int((args.dim+1)*random.random()) for r in range(bsz)]
                     #scaled_images=[img.resize((args.dim-r,args.dim-r)).resize((args.dim,args.dim)) for r,img in zip(scales,images)]
-                    scaled_images=[T.Resize(args.dim)(T.Resize(args.dim-r)(img)) for r,img in zip(scales,images) ]
-                    timesteps=torch.tensor([int(scheduler.config.num_train_timesteps*s/(args.dim-1)) for s in scales],device=device).long()
-                    print(CONTINUOUS_SCALE,"tiemsteps ",timesteps,scales)
+                    scaled_images=[T.Resize(args.dim)(T.Resize(r)(img)) for r,img in zip(scales,images) ]
+                    timesteps=torch.tensor([get_timesteps_scale(s) for s in scales],device=device).long()
+                    if misc_dict["epochs"]==start_epoch and misc_dict["b"]<5:
+                        print(CONTINUOUS_SCALE,"tiemsteps ",timesteps,scales)
                     
                 if args.timesteps==DISCRETE_SCALE:
                     scales=random.choices([j for j in range(len(dims))],k=bsz)
                     #scaled_images=[img.resize((dims[j],dims[j])).resize((args.dim,args.dim)) for j,img in zip(scales,images)]
                     scaled_images=[T.Resize(args.dim)(T.Resize(dims[j])(img)) for j,img in zip(scales,images) ]
-                    timesteps=torch.tensor([int(scheduler.config.num_train_timesteps*s/(len(dims))) for s in scales],device=device).long()
+                    timesteps=torch.tensor([get_timesteps_scale(s) for s in scales],device=device).long()
+                    if misc_dict["epochs"]==start_epoch and misc_dict["b"]<5:
+                        print(DISCRETE_SCALE,"tiemsteps ",timesteps,scales )
                 
                 if args.no_latent:
                     input_latents=torch.stack(scaled_images).to(device)
@@ -500,6 +515,8 @@ def main(args):
                 loss=F.mse_loss(predicted.float(),real_latents.float())
             loss=loss.cpu().detach().numpy()
         if misc_dict["mode"] in ["test","val"]:
+            if misc_dict["mode"]=="val" and args.val_limit !=-1 and misc_dict["b"]>= args.val_limit:
+                return 0
             #inpainting
             gen_inpaint=inference(unet,text_encoder,
                                   tokenizer,vae,
@@ -654,6 +671,7 @@ if __name__=='__main__':
     parser.add_argument("--no_latent",action="store_true",help="disable latent (only do this with cifar data)")
     parser.add_argument("--do_classifier_free_guidance",action="store_true")
     parser.add_argument("--guidance_scale",type=float,default=7.5)
+    parser.add_argument("--val_limit",type=int,default=10)
     args=parse_args(parser)
     print(args)
     main(args)

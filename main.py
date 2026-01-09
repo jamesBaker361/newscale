@@ -481,10 +481,11 @@ def main(args):
                 if args.timesteps==DISCRETE_SCALE:
                     scales=random.choices([j for j in range(len(dims))],k=bsz)
                     #scaled_images=[img.resize((dims[j],dims[j])).resize((args.dim,args.dim)) for j,img in zip(scales,images)]
-                    scaled_images=[T.Resize(args.dim)(T.Resize(dims[j])(img)) for j,img in zip(scales,images) ]
-                    timesteps=torch.tensor([get_timesteps_scale(s) for s in scales],device=device).long()
+                    
+                    timesteps=torch.tensor([get_timesteps_scale(dims[j]) for j in scales],device=device).long()
                     if misc_dict["epochs"]==start_epoch and misc_dict["b"]<5:
                         print(DISCRETE_SCALE,"tiemsteps ",timesteps,scales )
+                    scaled_images=[T.Resize(args.dim)(T.Resize(dims[j])(img)) for j,img in zip(scales,images) ]
                 
                 if args.no_latent:
                     input_latents=torch.stack(scaled_images).to(device)

@@ -485,7 +485,7 @@ def main(args):
                     
                     timesteps=torch.tensor([get_timesteps_scale(dims[j]) for j in scales],device=device).long()
                     if misc_dict["epochs"]==start_epoch and misc_dict["b"]<5:
-                        print(DISCRETE_SCALE,"tiemsteps ",timesteps,scales )
+                        print(DISCRETE_SCALE,"tiemsteps ",timesteps,scales ,[dims[j] for j in scales])
                     scaled_images=[T.Resize(args.dim)(T.Resize(dims[j])(img)) for j,img in zip(scales,images) ]
                 
                 if args.no_latent:

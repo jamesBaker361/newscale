@@ -372,10 +372,7 @@ def main(args):
     psnr_metric=PeakSignalNoiseRatio(data_range=(-1.0,1.0)).to(device)
     lpips_metric=LearnedPerceptualImagePatchSimilarity(net_type='squeeze').to(device)
     
-    if args.no_latent:
-        final_dim=args.dim
-    else:
-        final_dim=args.dim//8
+    final_dim=args.dim
     
     dims=[1]
     while dims[-1]!=final_dim:
@@ -386,6 +383,10 @@ def main(args):
     print("dims",dims)
     print("iteration dims",iteration_dims)
     print("step",scheduler.config.num_train_timesteps/(len(dims)-1))
+    
+    scale_dims=[1]
+    while scale_dims[-1]!=args.dim:
+        pass
     
     def get_timesteps_scale(scale:int):
         if scale==1:

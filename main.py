@@ -469,12 +469,14 @@ def main(args):
                 
             else:
                 if args.timesteps==CONTINUOUS_SCALE:
-                    scales=[int((args.dim+1)*random.random()) for r in range(bsz)]
+                    scales=[int((args.dim)*random.random())+1 for r in range(bsz)]
+                    
                     #scaled_images=[img.resize((args.dim-r,args.dim-r)).resize((args.dim,args.dim)) for r,img in zip(scales,images)]
-                    scaled_images=[T.Resize(args.dim)(T.Resize(r)(img)) for r,img in zip(scales,images) ]
+                    
                     timesteps=torch.tensor([get_timesteps_scale(s) for s in scales],device=device).long()
                     if misc_dict["epochs"]==start_epoch and misc_dict["b"]<5:
                         print(CONTINUOUS_SCALE,"tiemsteps ",timesteps,scales)
+                    scaled_images=[T.Resize(args.dim)(T.Resize(r)(img)) for r,img in zip(scales,images) ]
                     
                 if args.timesteps==DISCRETE_SCALE:
                     scales=random.choices([j for j in range(len(dims))],k=bsz)

@@ -379,9 +379,7 @@ def main(args):
         dims.append(2*dims[-1])
         
     dims=dims[::-1]
-    iteration_dims=[1]+[int(args.dim*float(j/args.num_inference_iterations)) for j in range(1,1+args.num_inference_iterations)]
     print("dims",dims)
-    print("iteration dims",iteration_dims)
     print("step",scheduler.config.num_train_timesteps/(len(dims)-1))
     
     scale_dims=[1]
@@ -659,7 +657,6 @@ if __name__=='__main__':
     parser=default_parser({"project":"scale-test"})
     parser.add_argument("--timesteps",type=str,default=DISCRETE_SCALE,help=f"{DISCRETE_SCALE} or {CONTINUOUS_SCALE} or {CONTINUOUS_NOISE}")
     parser.add_argument("--method",type=str,default=UNET,help=f"one of {UNET} {CONTROLNET} {LORA} {IPADAPTER}")
-    parser.add_argument("--num_inference_iterations",type=int,default=4)
     parser.add_argument("--dim",type=int,default=256)
     parser.add_argument("--min_dim",type=int,default=1)
     parser.add_argument("--text_conditional",action="store_true")

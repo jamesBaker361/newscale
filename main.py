@@ -461,6 +461,7 @@ def main(args):
                     #scaled_images=[img.resize((args.dim-r,args.dim-r)).resize((args.dim,args.dim)) for r,img in zip(scales,images)]
                     scaled_images=[T.Resize(args.dim)(T.Resize(args.dim-r)(img)) for r,img in zip(scales,images) ]
                     timesteps=torch.tensor([int(scheduler.config.num_train_timesteps*s/(args.dim-1)) for s in scales],device=device).long()
+                    print(timesteps)
                     
                 if args.timesteps==DISCRETE_SCALE:
                     scales=random.choices([j for j in range(len(dims))],k=bsz)

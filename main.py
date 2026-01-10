@@ -382,10 +382,6 @@ def main(args):
     print("dims",dims)
     print("step",scheduler.config.num_train_timesteps/(len(dims)-1))
     
-    scale_dims=[1]
-    while scale_dims[-1]!=args.dim:
-        pass
-    
     def get_timesteps_scale(scale:int):
         if scale==1:
             return 999

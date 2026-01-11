@@ -446,7 +446,7 @@ def main(args):
                 real_latents=vae.encode(images.to(device)).latent_dist.sample()
                 real_latents*=vae.config.scaling_factor
             if args.text_conditional:
-                print(captions)
+                print('cpations',captions)
                 token_ids= tokenizer(
                     captions, max_length=tokenizer.model_max_length, padding="max_length", truncation=True, return_tensors="pt"
                 ).input_ids

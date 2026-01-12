@@ -267,3 +267,8 @@ class AFHQDataset(MaskDataset):
             "mask":self.get_mask(),
             #"mask_out":Image.open(self.mask_list[random.randint(0,len(self.mask_list-1))]).convert("L").resize((self.dim,self.dim))
         }
+        
+if __name__=='__main__':
+    c10=CIFAR10Dataset("train",limit_per_class=10)
+    for batch in c10:
+        print(batch)

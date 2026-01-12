@@ -270,5 +270,13 @@ class AFHQDataset(MaskDataset):
         
 if __name__=='__main__':
     c10=CIFAR10Dataset("train",limit_per_class=10)
+    print("cifar")
     for batch in c10:
         print(batch)
+        break
+        
+    mini=MiniImageNet("train",limit_per_class=10)
+    print("mini")
+    for batch in mini:
+        print(batch)
+        break

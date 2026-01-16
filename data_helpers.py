@@ -42,14 +42,14 @@ class CIFAR10Dataset(MaskDataset):
         self.data = load_dataset("uoft-cs/cifar10", split=split)
         self.data = self.data.cast_column("image", datasets.Image())
 
-        class_mapping = json.load(open("sun397_class_index.json"))
+        class_mapping = ["airplane", "automobile", "bird",  "cat" , "deer" , "dog" , "frog" , "horse" , "ship" , "truck"]
 
         self.indices = []
         self.cat_list = []
         self.label_count = defaultdict(int)
 
         for i, row in enumerate(self.data):
-            label = row["label"]
+            label = class_mapping[row["label"]]
 
             if limit_per_class>0 and self.label_count[label] >= limit_per_class:
                 continue

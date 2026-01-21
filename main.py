@@ -478,7 +478,7 @@ def main(args):
                 
             else:
                 if args.timesteps==CONTINUOUS_SCALE:
-                    scales=[random.randrange(0,args.dim-1) for r in range(bsz)]
+                    scales=[random.randrange(1,args.dim-1) for r in range(bsz)]
                     target_scales=[random.randint(s+1,args.dim) for s in scales]
                     
                     #scaled_images=[img.resize((args.dim-r,args.dim-r)).resize((args.dim,args.dim)) for r,img in zip(scales,images)]

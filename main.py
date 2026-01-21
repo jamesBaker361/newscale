@@ -349,7 +349,8 @@ def main(args):
             else:
                 unet_class=MetadataUNet2DConditionModel
                 
-            unet=unet_class.from_config(json.load(open(config_path,"r"))).to(device)
+            with open(config_path,"r") as file:
+                unet=unet_class.from_config(json.load(file)).to(device)
             #unet=pipe.unet
             params=[p for p in unet.parameters()]
             

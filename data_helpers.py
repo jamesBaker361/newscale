@@ -6,6 +6,7 @@ import random
 from datasets import load_dataset
 import datasets
 import torchvision
+import torch
 import json
 from collections import defaultdict
 
@@ -33,6 +34,19 @@ class MaskDataset(Dataset):
         mask=self.image_processor.numpy_to_pt(mask)
         return mask #we DONT want to normalize so we do this
         
+class UnitTestDataset(MaskDataset):
+    def __init__(self,dim:int=256,length:int=10):
+        super().__init__()
+        self.dim=dim
+        
+        self.img_list=[torch.rand((3,dim,dim)) for _ in range(length)]
+        
+    def __getitem__(self, index):
+        return {
+            "image":self.img_list[index],
+            "caption":"text",
+            "mask":self.get_mask()
+        }
         
 class CIFAR10Dataset(MaskDataset):   
     def __init__(self, split="train", dim=256, limit_per_class=150):

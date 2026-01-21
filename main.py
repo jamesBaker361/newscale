@@ -11,7 +11,7 @@ from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion import retri
 from diffusers.models.attention_processor import  IPAdapterAttnProcessor, IPAdapterAttnProcessor2_0, IPAdapterXFormersAttnProcessor,Attention
 from transformers import CLIPTokenizer,CLIPTextModel
 import time
-from data_helpers import AFHQDataset,SUNDataset,MiniImageNet,FFHQDataset,CIFAR100Dataset,CIFAR10Dataset
+from data_helpers import AFHQDataset,SUNDataset,MiniImageNet,FFHQDataset,CIFAR100Dataset,CIFAR10Dataset,UnitTestDataset
 import torch
 from torch.utils.data import Dataset, DataLoader,random_split
 import torch.nn.functional as F
@@ -33,6 +33,7 @@ from datasets import Dataset
 from torchmetrics.image.inception import InceptionScore
 import numpy as np
 from tqdm.auto import tqdm
+from experiment_helpers.metadata_unet import MetadataUNet2DConditionModel
 
 DISCRETE_SCALE="discrete"
 CONTINUOUS_SCALE="continuous"
@@ -46,6 +47,7 @@ VELOCITY="v_prediction"
 EPSILON="epsilon"
 SAMPLE="sample"
 MINI_IMAGE="miniimagenet"
+TEST_DATA="testdata"
 SUN397="sun"
 AFHQ="afhq"
 FFHQ="ffhq"
@@ -211,6 +213,9 @@ def main(args):
         train_dataset=CIFAR100Dataset(split="train",dim=args.dim)
         test_dataset=CIFAR100Dataset(split="test",dim=args.dim)
         train_dataset,val_dataset=random_split(train_dataset,[0.9,0.1])
+    elif args.src_dataset.lower()==TEST_DATA:
+        train_dataset=UnitTestDataset(dim=args.dim,length=args.limit)
+        train_dataset,test_dataset,val_dataset=random_split(train_dataset,[0.8,0.1,0.1])
     else:
         print("Unknown dataset ",args.src_dataset, "not in ",DATASET_LIST)
         
@@ -306,8 +311,12 @@ def main(args):
     else:
         if args.method==UNET:
             config_path=hf_hub_download(BASE_REPO,"config.json",subfolder="unet")
-            
-            unet=UNet2DConditionModel.from_config(json.load(open(config_path,"r"))).to(device)
+            if args.timesteps==CONTINUOUS_NOISE:
+                unet_class=UNet2DConditionModel
+            else:
+                unet_class=MetadataUNet2DConditionModel
+                
+            unet=unet_class.from_config(json.load(open(config_path,"r"))).to(device)
             #unet=pipe.unet
             params=[p for p in unet.parameters()]
             
@@ -315,6 +324,10 @@ def main(args):
             model_dict={
             "pytorch_weights.safetensors":unet
             }
+            
+            if args.timesteps!=CONTINUOUS_NOISE:
+                unet.init_metadata(True,1,False,0) #given two images, this is the level of downscaling that the original image was at (and must be recovered)
+                unet.metadata_embedding.to(device)
 
             '''optimizer,train_loader,test_loader,val_loader,vae,unet,text_encoder=accelerator.prepare(
                 optimizer,train_loader,test_loader,val_loader,vae,unet,text_encoder)'''
@@ -457,7 +470,7 @@ def main(args):
             encoder_hidden_states=text_encoder(token_ids.to(device), return_dict=False)[0]
 
             
-            if args.timesteps==CONTINUOUS_NOISE:
+            if args.timesteps==CONTINUOUS_NOISE: #baseline normal diffusion
                 noise=torch.randn_like(real_latents)
                 timesteps = torch.randint(0, scheduler.config.num_train_timesteps, (bsz,), device=real_latents.device)
         
@@ -466,27 +479,46 @@ def main(args):
             else:
                 if args.timesteps==CONTINUOUS_SCALE:
                     scales=[int((args.dim)*random.random())+1 for r in range(bsz)]
+                    target_scales=[random.randrange(s+1,args.dim) for s in scales]
                     
                     #scaled_images=[img.resize((args.dim-r,args.dim-r)).resize((args.dim,args.dim)) for r,img in zip(scales,images)]
                     
                     timesteps=torch.tensor([get_timesteps_scale(s) for s in scales],device=device).long()
+                    target_timesteps=torch.tensor([[get_timesteps_scale(s)] for s in target_scales],device=device).long()
                     if misc_dict["epochs"]==start_epoch and misc_dict["b"]<5:
                         print(CONTINUOUS_SCALE,"tiemsteps ",timesteps,scales)
                     scaled_images=[T.Resize(args.dim)(T.Resize(r)(img)) for r,img in zip(scales,images) ]
+                    scaled_target_images=[T.Resize(args.dim)(T.Resize(r)(img)) for r,img in zip(target_scales,images) ]
                     
                 if args.timesteps==DISCRETE_SCALE:
-                    scales=random.choices([j for j in range(len(dims))],k=bsz)
+                    scales=random.choices([j for j in range(1,len(dims))],k=bsz)
+                    target_scales=[random.randint(0,j-1) for j in scales]
                     #scaled_images=[img.resize((dims[j],dims[j])).resize((args.dim,args.dim)) for j,img in zip(scales,images)]
                     
                     timesteps=torch.tensor([get_timesteps_scale(dims[j]) for j in scales],device=device).long()
+                    target_timesteps=torch.tensor([[get_timesteps_scale(dims[j])] for j in target_scales],device=device).long()
                     if misc_dict["epochs"]==start_epoch and misc_dict["b"]<5:
                         print(DISCRETE_SCALE,"tiemsteps ",timesteps,scales ,[dims[j] for j in scales])
                     scaled_images=[T.Resize(args.dim)(T.Resize(dims[j])(img)) for j,img in zip(scales,images) ]
+                    scaled_target_images=[T.Resize(args.dim)(T.Resize(dims[j])(img)) for j,img in zip(target_scales,images) ]
+                
+                print("timetstpes",timesteps)
+                print("target timesteps",target_timesteps)
+                print("scales ",scales)
+                print("target scales ",target_scales)
+                
                 
                 if args.no_latent:
                     input_latents=torch.stack(scaled_images).to(device)
                 else:
                     input_latents=vae.encode(torch.stack(scaled_images).to(device)).latent_dist.sample()*vae.config.scaling_factor
+                    
+                if args.timesteps!=CONTINUOUS_NOISE:
+                    if args.no_latent:
+                        target_latents=torch.stack(scaled_target_images).to(device)
+                    else:
+                        target_latents=vae.encode(torch.stack(scaled_target_images).to(device)).latent_dist.sample()*vae.config.scaling_factor
+                        
                 #print('bsz',bsz,'input_latents.size()',input_latents.size(),'torch.stack(scaled_images)',torch.stack(scaled_images).size(),'real latensts' ,real_latents.size())
                 noise=input_latents -real_latents #the "noise"
             if args.prediction_type==EPSILON:
@@ -499,19 +531,24 @@ def main(args):
             if misc_dict["epochs"]==start_epoch and misc_dict["b"]==0:
                 for name,t in zip(['timesteps','target_latents','images','input_latents'],[timesteps,target_latents,images,input_latents]):
                     print(name,t.size(),t.device)
+                    
+            if args.timesteps==CONTINUOUS_NOISE:
+                kwargs={}
+            else:
+                kwargs={"metadata":target_timesteps}
                 
             if training:
                 with accelerator.accumulate(params):
                     with accelerator.autocast():
                         
-                        predicted=unet(input_latents,timesteps,encoder_hidden_states=encoder_hidden_states,return_dict=False)[0]
+                        predicted=unet(input_latents,timesteps,encoder_hidden_states=encoder_hidden_states,return_dict=False,**kwargs)[0]
                         loss=F.mse_loss(predicted.float(),target_latents.float())
                         accelerator.backward(loss)
                         optimizer.step()
                         optimizer.zero_grad()
             else:
-                predicted=unet(input_latents,timesteps,encoder_hidden_states=encoder_hidden_states,return_dict=False)[0]
-                loss=F.mse_loss(predicted.float(),real_latents.float())
+                predicted=unet(input_latents,timesteps,encoder_hidden_states=encoder_hidden_states,return_dict=False,**kwargs)[0]
+                loss=F.mse_loss(predicted.float(),target_latents.float())
             loss=loss.cpu().detach().numpy()
         if misc_dict["mode"] in ["test","val"]:
             if misc_dict["mode"]=="val" and args.val_limit !=-1 and misc_dict["b"]>= args.val_limit:
@@ -564,12 +601,12 @@ def main(args):
                 #print()
                 lpips_score_in=lpips_metric(gen_inpaint,images)
                 lpips_score_out=lpips_metric(gen_outpaint,images)
-                fid_metric_in.update(normalize(images),True)
-                fid_metric_in.update(normalize(gen_inpaint),False)
+                #fid_metric_in.update(normalize(images),True)
+                #fid_metric_in.update(normalize(gen_inpaint),False)
                 #fid_score_in=fid_metric.compute()
                 #fid_metric.reset()
-                fid_metric_out.update(normalize(images),True)
-                fid_metric_out.update(normalize(gen_outpaint),False)
+                #fid_metric_out.update(normalize(images),True)
+                #fid_metric_out.update(normalize(gen_outpaint),False)
                 #fid_score_out=fid_metric.compute()
                 
                 for key,score in zip(["ssim","psnr","lpips_in","lpips_out"], #,"fid_in","fid_out"],

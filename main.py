@@ -153,14 +153,16 @@ def inference(unet:UNet2DConditionModel,
             
             
         if args.timesteps==DISCRETE_SCALE:
-            timesteps=dims[1::-1]
-            target_timesteps=dims[:-1:-1]
+            timesteps=dims[::-1][:-1]
+            timesteps=[get_timesteps_scale(s,args.dim,scheduler) for s in timesteps]
+            target_timesteps=dims[::-1][1:]
+            target_timesteps=[get_timesteps_scale(s,args.dim,scheduler) for s in target_timesteps]
             
         timesteps=torch.tensor(timesteps).long().to(device)
-        target_timesteps=torch.tensor(target_timesteps).long().to(device).unsqueeze(-1)
+        target_timesteps=torch.tensor(target_timesteps).long().to(device).unsqueeze(-1).unsqueeze(0)
+        print("time",timesteps)
+        print("target",target_timesteps)
             
-        print("timsteps",timesteps)
-        print("targe",timesteps)
     #print("after else if ",latents.size(),latents.max(),latents.min())    
     #with tqdm(total=num_inference_steps) as progress_bar:
     for i,(t,target_t) in enumerate(zip(timesteps,target_timesteps)):
@@ -177,6 +179,7 @@ def inference(unet:UNet2DConditionModel,
                 t,
             encoder_hidden_states=encoder_hidden_states,
             return_dict=False,
+            **kwargs
         )[0]
         
         # compute the previous noisy sample x_t -> x_t-1
@@ -427,7 +430,7 @@ def main(args):
         
     dims=dims[::-1]
     print("dims",dims)
-    print("step",scheduler.config.num_train_timesteps/(len(dims)-1))
+    print("step",scheduler.config.num_train_timesteps/(len(dims)))
     
 
             
@@ -485,7 +488,6 @@ def main(args):
                 real_latents=vae.encode(images.to(device)).latent_dist.sample()
                 real_latents*=vae.config.scaling_factor
             if args.text_conditional:
-                print('cpations',captions)
                 token_ids= tokenizer(
                     captions, max_length=tokenizer.model_max_length, padding="max_length", truncation=True, return_tensors="pt"
                 ).input_ids
@@ -509,8 +511,8 @@ def main(args):
                     
                     #scaled_images=[img.resize((args.dim-r,args.dim-r)).resize((args.dim,args.dim)) for r,img in zip(scales,images)]
                     
-                    timesteps=torch.tensor([get_timesteps_scale(s) for s in scales],device=device).long()
-                    target_timesteps=torch.tensor([[get_timesteps_scale(s)] for s in target_scales],device=device).long()
+                    timesteps=torch.tensor([get_timesteps_scale(s,args.dim,scheduler) for s in scales],device=device).long()
+                    target_timesteps=torch.tensor([[get_timesteps_scale(s,args.dim,scheduler)] for s in target_scales],device=device).long()
                     if misc_dict["epochs"]==start_epoch and misc_dict["b"]<5:
                         print(CONTINUOUS_SCALE,"tiemsteps ",timesteps,scales)
                     scaled_images=[T.Resize(args.dim)(T.Resize(r)(img)) for r,img in zip(scales,images) ]
@@ -521,8 +523,8 @@ def main(args):
                     target_scales=[random.randint(0,j-1) for j in scales]
                     #scaled_images=[img.resize((dims[j],dims[j])).resize((args.dim,args.dim)) for j,img in zip(scales,images)]
                     
-                    timesteps=torch.tensor([get_timesteps_scale(dims[j]) for j in scales],device=device).long()
-                    target_timesteps=torch.tensor([[get_timesteps_scale(dims[j])] for j in target_scales],device=device).long()
+                    timesteps=torch.tensor([get_timesteps_scale(dims[j],args.dim,scheduler) for j in scales],device=device).long()
+                    target_timesteps=torch.tensor([[get_timesteps_scale(dims[j],args.dim,scheduler)] for j in target_scales],device=device).long()
                     if misc_dict["epochs"]==start_epoch and misc_dict["b"]<5:
                         print(DISCRETE_SCALE,"tiemsteps ",timesteps,scales ,[dims[j] for j in scales])
                     scaled_images=[T.Resize(args.dim)(T.Resize(dims[j])(img)) for j,img in zip(scales,images) ]

@@ -164,7 +164,7 @@ def inference(unet:UNet2DConditionModel,
     image = image_processor.postprocess(image,output_type=output_type)
     return image
         
-        
+
 
 
 def main(args):
@@ -478,8 +478,8 @@ def main(args):
                 
             else:
                 if args.timesteps==CONTINUOUS_SCALE:
-                    scales=[int((args.dim)*random.random())+1 for r in range(bsz)]
-                    target_scales=[random.randrange(s+1,args.dim) for s in scales]
+                    scales=[random.randrange(0,args.dim-1) for r in range(bsz)]
+                    target_scales=[random.randint(s+1,args.dim) for s in scales]
                     
                     #scaled_images=[img.resize((args.dim-r,args.dim-r)).resize((args.dim,args.dim)) for r,img in zip(scales,images)]
                     
@@ -502,10 +502,10 @@ def main(args):
                     scaled_images=[T.Resize(args.dim)(T.Resize(dims[j])(img)) for j,img in zip(scales,images) ]
                     scaled_target_images=[T.Resize(args.dim)(T.Resize(dims[j])(img)) for j,img in zip(target_scales,images) ]
                 
-                print("timetstpes",timesteps)
+                '''print("timetstpes",timesteps)
                 print("target timesteps",target_timesteps)
                 print("scales ",scales)
-                print("target scales ",target_scales)
+                print("target scales ",target_scales)'''
                 
                 
                 if args.no_latent:

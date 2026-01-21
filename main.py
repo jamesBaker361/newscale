@@ -56,6 +56,19 @@ C100="cifar100"
 
 DATASET_LIST=[MINI_IMAGE,SUN397,AFHQ,FFHQ,C10,C100]
 
+STEP_MAX=999
+STEP_MIN=0
+
+def get_timesteps_scale(scale:int,dim:int,scheduler):
+    if scale==1:
+        return STEP_MAX
+    if scale==dim:
+        return STEP_MIN
+    else:
+        reverse_scale=dim-scale
+        step=scheduler.config.num_train_timesteps/dim
+        return int(reverse_scale*step)
+
 def inference(unet:UNet2DConditionModel,
               text_encoder:CLIPTextModel,
               tokenizer:CLIPTokenizer,
@@ -116,6 +129,7 @@ def inference(unet:UNet2DConditionModel,
                 latents=torch.randn((bsz,4,args.dim//8,args.dim//8),device=device)
 
         timesteps,num_inference_steps=retrieve_timesteps(scheduler,num_inference_steps,device=device)
+        target_timesteps=timesteps
         
     else:
         img = [Image.new("RGB", (args.dim, args.dim), tuple(random.randint(0, 255) for _ in range(3))) for _ in range(bsz)]
@@ -131,16 +145,32 @@ def inference(unet:UNet2DConditionModel,
 
         
         if args.timesteps==CONTINUOUS_SCALE:
-            timesteps,num_inference_steps=retrieve_timesteps(scheduler,num_inference_steps,device=device)
+            t_step=scheduler.config.num_train_timesteps/num_inference_steps
+            timesteps=[STEP_MAX-t_step*t for t in range(num_inference_steps)]
+            target_timesteps=[STEP_MIN+t*t_step for t in range(num_inference_steps) ][::-1]
+            
+        
+            
             
         if args.timesteps==DISCRETE_SCALE:
-            timesteps=[torch.tensor(t,device=device).long() for t in dims]
+            timesteps=dims[1::-1]
+            target_timesteps=dims[:-1:-1]
+            
+        timesteps=torch.tensor(timesteps).long().to(device)
+        target_timesteps=torch.tensor(target_timesteps).long().to(device).unsqueeze(-1)
+            
+        print("timsteps",timesteps)
+        print("targe",timesteps)
     #print("after else if ",latents.size(),latents.max(),latents.min())    
     #with tqdm(total=num_inference_steps) as progress_bar:
-    for i,t in enumerate(timesteps):
+    for i,(t,target_t) in enumerate(zip(timesteps,target_timesteps)):
         # expand the latents if we are doing classifier free guidance
         latents_input= torch.cat([latents] * 2) if args.do_classifier_free_guidance else latents
         #latent_model_input = scheduler.scale_model_input(latents, t)
+        if args.timesteps==CONTINUOUS_NOISE:
+            kwargs={}
+        else:
+            kwargs={"metadata":target_t}
         
         noise_pred = unet(
                 latents_input,
@@ -154,9 +184,12 @@ def inference(unet:UNet2DConditionModel,
             noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
             noise_pred = noise_pred_uncond + args.guidance_scale * (noise_pred_text - noise_pred_uncond)
         
-        latents = scheduler.step(noise_pred, t, latents, return_dict=False)[0]
+        if args.timesteps==CONTINUOUS_NOISE:
+            latents = scheduler.step(noise_pred, t, latents, return_dict=False)[0]
             #print("latents loop",latents.size(),latents.max(),latents.min())
             #progress_bar.update()
+        else:
+            latents=noise_pred
     if no_latents:
         image=latents
     else:
@@ -395,15 +428,7 @@ def main(args):
     print("dims",dims)
     print("step",scheduler.config.num_train_timesteps/(len(dims)-1))
     
-    def get_timesteps_scale(scale:int):
-        if scale==1:
-            return 999
-        if scale==args.dim:
-            return 1
-        else:
-            reverse_scale=args.dim-scale
-            step=scheduler.config.num_train_timesteps/args.dim
-            return int(reverse_scale*step)
+
             
     
     mask_super_res=Image.open(os.path.join("data","datasets","gt_keep_masks","nn2","000000.png")).convert("L")

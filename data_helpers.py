@@ -40,6 +40,7 @@ class UnitTestDataset(MaskDataset):
         self.dim=dim
         
         self.img_list=[torch.rand((3,dim,dim)) for _ in range(length)]
+        self.cat_set=["text"]
         
     def __getitem__(self, index):
         return {

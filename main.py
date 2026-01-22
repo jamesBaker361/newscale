@@ -631,12 +631,12 @@ def main(args):
                 #print()
                 lpips_score_in=lpips_metric(gen_inpaint,images)
                 lpips_score_out=lpips_metric(gen_outpaint,images)
-                #fid_metric_in.update(normalize(images),True)
-                #fid_metric_in.update(normalize(gen_inpaint),False)
+                fid_metric_in.update(normalize(images),True)
+                fid_metric_in.update(normalize(gen_inpaint),False)
                 #fid_score_in=fid_metric.compute()
                 #fid_metric.reset()
-                #fid_metric_out.update(normalize(images),True)
-                #fid_metric_out.update(normalize(gen_outpaint),False)
+                fid_metric_out.update(normalize(images),True)
+                fid_metric_out.update(normalize(gen_outpaint),False)
                 #fid_score_out=fid_metric.compute()
                 
                 for key,score in zip(["ssim","psnr","lpips_in","lpips_out"], #,"fid_in","fid_out"],

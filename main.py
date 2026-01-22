@@ -158,10 +158,10 @@ def inference(unet:UNet2DConditionModel,
             target_timesteps=dims[::-1][1:]
             target_timesteps=[get_timesteps_scale(s,args.dim,scheduler) for s in target_timesteps]
             
-        timesteps=torch.tensor(timesteps).long().to(device)
-        target_timesteps=torch.tensor(target_timesteps).long().to(device).unsqueeze(-1).unsqueeze(0)
-        print("time",timesteps)
-        print("target",target_timesteps)
+        timesteps=torch.tensor(timesteps).long().to(device).unsqueeze(-1)
+        target_timesteps=torch.tensor(target_timesteps).long().to(device).unsqueeze(-1).unsqueeze(-1)
+        '''print("time",timesteps,timesteps.size())
+        print("target",target_timesteps,target_timesteps.size())'''
             
     #print("after else if ",latents.size(),latents.max(),latents.min())    
     #with tqdm(total=num_inference_steps) as progress_bar:
@@ -173,6 +173,8 @@ def inference(unet:UNet2DConditionModel,
             kwargs={}
         else:
             kwargs={"metadata":target_t}
+            '''print("infenrence t",t,t.size())
+            print("infernece target t",target_t,target_t.size())'''
         
         noise_pred = unet(
                 latents_input,
@@ -530,8 +532,8 @@ def main(args):
                     scaled_images=[T.Resize(args.dim)(T.Resize(dims[j])(img)) for j,img in zip(scales,images) ]
                     scaled_target_images=[T.Resize(args.dim)(T.Resize(dims[j])(img)) for j,img in zip(target_scales,images) ]
                 
-                '''print("timetstpes",timesteps)
-                print("target timesteps",target_timesteps)
+                '''print(" training timetstpes",timesteps.size())
+                print("training target timesteps",target_timesteps.size())
                 print("scales ",scales)
                 print("target scales ",target_scales)'''
                 
